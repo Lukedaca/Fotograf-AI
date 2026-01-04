@@ -84,7 +84,11 @@ export type EditorAction = {
   timestamp: number;
 } | null;
 
-export type View = 'home' | 'upload' | 'editor' | 'batch' | 'generate' | 'raw-converter';
+export type View = 'home' | 'dashboard' | 'upload' | 'editor' | 'batch' | 'generate' | 'raw-converter';
+
+export type JobTemplate = 'portrait' | 'event' | 'product' | 'social' | 'none';
+
+export type WorkflowStep = 'import' | 'culling' | 'edit' | 'retouch' | 'export';
 
 export interface HistoryEntry {
   state: UploadedFile[];

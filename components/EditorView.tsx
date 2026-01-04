@@ -1,26 +1,20 @@
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './Header';
 import ManualEditControls from './ManualEditControls';
-import FeedbackButtons from './FeedbackButtons';
 import Histogram from './Histogram';
 import CompareSlider from './CompareSlider';
 import { 
     UndoIcon, 
-    EyeIcon, 
     UploadIcon, 
     AutopilotIcon, 
-    ArrowPathIcon,
-    ZoomInIcon,
-    ZoomOutIcon,
-    MagnifyingGlassIcon,
-    XIcon,
     SparklesIcon,
-    FilmIcon,
     YoutubeIcon,
-    ExportIcon,
     MicrophoneIcon,
-    ExpandIcon
+    HistoryIcon,
+    ExportIcon,
+    EraserIcon,
+    AutoCropIcon
 } from './icons';
 import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View } from '../types';
 import * as geminiService from '../services/geminiService';
@@ -46,11 +40,6 @@ interface EditorViewProps {
   onDeductCredits: (amount: number) => boolean;
 }
 
-const getApiErrorMessage = (error: unknown, defaultMessage = 'An error occurred.'): string => {
-    if (error instanceof Error) return error.message;
-    return defaultMessage;
-};
-
 const INITIAL_EDITS: ManualEdits = {
   brightness: 0,
   contrast: 0,
@@ -67,7 +56,7 @@ const INITIAL_EDITS: ManualEdits = {
 };
 
 const EditorView: React.FC<EditorViewProps> = (props) => {
-  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits } = props;
+  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate } = props;
   const { t: trans } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -84,13 +73,10 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [thumbnailResolution, setThumbnailResolution] = useState<'1K' | '2K' | '4K'>('1K');
   const [thumbnailFormat, setThumbnailFormat] = useState<'jpeg' | 'png' | 'webp'>('jpeg');
 
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
 
-  // Voice Recognition (Simple Client Side)
+  // Voice Recognition
   useEffect(() => {
       let recognition: any;
       if (isVoiceActive) {
@@ -103,18 +89,12 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
               recognition.onresult = (event: any) => {
                   const last = event.results.length - 1;
                   const command = event.results[last][0].transcript.toLowerCase().trim();
-                  console.log("Voice Command:", command);
-                  
                   if (command.includes('jas') || command.includes('brightness')) {
-                      if (command.includes('víc') || command.includes('up') || command.includes('přidat')) {
-                          setManualEdits(prev => { const n = {...prev, brightness: Math.min(100, prev.brightness + 10)}; return n; });
-                      } else if (command.includes('méně') || command.includes('down') || command.includes('ubrat')) {
-                           setManualEdits(prev => { const n = {...prev, brightness: Math.max(-100, prev.brightness - 10)}; return n; });
+                      if (command.includes('víc') || command.includes('up')) {
+                          setManualEdits(prev => ({...prev, brightness: Math.min(100, prev.brightness + 10)}));
+                      } else if (command.includes('méně') || command.includes('down')) {
+                           setManualEdits(prev => ({...prev, brightness: Math.max(-100, prev.brightness - 10)}));
                       }
-                  } else if (command.includes('kontrast') || command.includes('contrast')) {
-                       if (command.includes('víc') || command.includes('up')) {
-                           setManualEdits(prev => { const n = {...prev, contrast: Math.min(100, prev.contrast + 10)}; return n; });
-                       }
                   } else if (command.includes('reset')) {
                       setManualEdits(INITIAL_EDITS);
                   }
@@ -125,32 +105,37 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
               setIsVoiceActive(false);
           }
       }
-      return () => {
-          if (recognition) recognition.stop();
-      };
-  }, [isVoiceActive, language]);
+      return () => { if (recognition) recognition.stop(); };
+  }, [isVoiceActive, language, addNotification]);
 
-  const updateFile = useCallback((fileId: string, updates: Partial<UploadedFile>, actionName: string) => {
-    onSetFiles(currentFiles => currentFiles.map(f => f.id === fileId ? { ...f, ...updates } : f), actionName);
-  }, [onSetFiles]);
-
-  // Debounced Edit Application
   useEffect(() => {
     if (!activeFile) return;
-    
     const apply = async () => {
         try {
-            const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, { format: 'jpeg', quality: 90, scale: 0.5 }); // Low scale for preview speed
+            const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, { format: 'jpeg', quality: 90, scale: 0.5 });
             const url = URL.createObjectURL(blob);
             setEditedPreviewUrl(url);
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
-
     const t = setTimeout(apply, 150);
     return () => clearTimeout(t);
   }, [activeFile, manualEdits]);
+
+  const handleAutopilot = async () => {
+    if (!activeFile) return;
+    const COST = 3;
+    if (!onDeductCredits(COST)) return;
+
+    setIsLoading(true);
+    setLoadingMessage("AI analyzuje a vylepšuje váš snímek...");
+    try {
+        const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
+        const url = URL.createObjectURL(newFile);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
+        addNotification(trans.msg_success, 'info');
+    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    finally { setIsLoading(false); }
+  };
 
   const handleManualExport = async () => {
     if (!activeFile) return;
@@ -158,73 +143,34 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     try {
         const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
         const url = URL.createObjectURL(blob);
-        
-        // Trigger Download
         const link = document.createElement('a');
         link.href = url;
         link.download = `edited_${activeFile.file.name.replace(/\.[^/.]+$/, "")}.${exportOptions.format === 'jpeg' ? 'jpg' : 'png'}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
         addNotification(trans.msg_success, 'info');
-    } catch (e) {
-        addNotification(trans.msg_error, 'error');
-    } finally {
-        setIsLoading(false);
-    }
+    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    finally { setIsLoading(false); }
   };
 
   const handleGenerateThumbnail = async () => {
-    if (!thumbnailTopic.trim()) {
-        addNotification(trans.tool_youtube_topic_ph, 'error');
-        return;
-    }
-
+    if (!thumbnailTopic.trim()) { addNotification(trans.tool_youtube_topic_ph, 'error'); return; }
     const COST = 10;
-    if (!onDeductCredits(COST)) {
-        addNotification(`${trans.credits_low}. ${trans.credits_cost}: ${COST}`, 'error');
-        return;
-    }
-
-    // ... (Keep existing key check)
-    if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-            await window.aistudio.openSelectKey();
-        }
-    }
-
+    if (!onDeductCredits(COST)) return;
     setIsLoading(true);
     setLoadingMessage("Gemini 3 Pro navrhuje virální miniaturu...");
     try {
-        const { file } = await geminiService.generateYouTubeThumbnail(
-            thumbnailTopic, 
-            thumbnailText, 
-            { resolution: thumbnailResolution, format: thumbnailFormat }
-        );
+        const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { resolution: thumbnailResolution, format: thumbnailFormat });
         const previewUrl = URL.createObjectURL(file);
-        const newUploadedFile: UploadedFile = {
-            id: `yt-${Date.now()}`,
-            file,
-            previewUrl,
-            originalPreviewUrl: previewUrl,
-        };
+        const newUploadedFile: UploadedFile = { id: `yt-${Date.now()}`, file, previewUrl, originalPreviewUrl: previewUrl };
         onSetFiles(prev => [...prev, newUploadedFile], 'YouTube Thumbnail Creation');
         onSetActiveFileId(newUploadedFile.id);
         addNotification(trans.msg_success, 'info');
-    } catch (e: any) {
-        let errorMsg = e instanceof Error ? e.message : trans.msg_error;
-        if (errorMsg.includes("Requested entity was not found")) {
-             if (window.aistudio) await window.aistudio.openSelectKey();
-        }
-        addNotification(errorMsg, 'error');
-    } finally {
-        setIsLoading(false);
-    }
+    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    finally { setIsLoading(false); }
   };
 
-  // If we are not in YouTube mode and have no file, show "No Image"
   if (!activeFile && !isYouTubeMode) {
     return (
       <div className="flex-1 flex flex-col h-full bg-slate-950">
@@ -241,42 +187,51 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
-        <Header title={isYouTubeMode ? "YouTube Thumbnail Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} />
+        <Header title={isYouTubeMode ? "YouTube Thumbnail Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} onBuyCredits={props.onBuyCredits} />
         
+        {/* Quick Start Ribbon */}
+        {!isYouTubeMode && activeFile && (
+          <div className="bg-slate-900/40 border-b border-white/5 py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 mr-2">Quick Actions:</span>
+            <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-full border border-cyan-500/20 transition-all text-[11px] font-bold">
+              <AutopilotIcon className="w-3.5 h-3.5" />
+              Base Edit
+            </button>
+            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 rounded-full border border-fuchsia-500/20 transition-all text-[11px] font-bold">
+              <EraserIcon className="w-3.5 h-3.5" />
+              Retouch
+            </button>
+            <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/20 transition-all text-[11px] font-bold">
+              <AutoCropIcon className="w-3.5 h-3.5" />
+              Auto Crop
+            </button>
+            <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full border border-white/5 transition-all text-[11px] font-bold">
+              <ExportIcon className="w-3.5 h-3.5" />
+              Quick Export
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             {/* Viewport */}
             <div className="flex-1 bg-slate-900/40 relative overflow-hidden flex items-center justify-center p-4">
                 <div className="w-full max-w-4xl h-full relative flex items-center justify-center">
                     
-                    {/* Voice Director Button */}
                     {!isYouTubeMode && activeFile && (
-                        <button 
-                            onClick={() => setIsVoiceActive(!isVoiceActive)}
-                            className={`absolute top-4 left-4 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${isVoiceActive ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
-                            title="Voice Director (Beta)"
-                        >
+                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${isVoiceActive ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     )}
 
                     {activeFile ? (
-                        <div className="relative group shadow-2xl rounded-xl overflow-hidden border border-white/10 ring-1 ring-white/5 max-h-full max-w-full">
+                        <div className="relative group shadow-2xl rounded-xl overflow-hidden border border-white/10 max-h-full max-w-full">
                            {isComparing ? (
-                               <CompareSlider 
-                                   beforeUrl={activeFile.originalPreviewUrl} 
-                                   afterUrl={editedPreviewUrl || activeFile.previewUrl} 
-                               />
+                               <CompareSlider beforeUrl={activeFile.originalPreviewUrl} afterUrl={editedPreviewUrl || activeFile.previewUrl} />
                            ) : (
                                <>
                                 <img src={editedPreviewUrl || activeFile.previewUrl} alt="Preview" className="max-h-full max-w-full object-contain select-none" />
-                                <button
-                                    onMouseDown={() => setIsComparing(true)}
-                                    onMouseUp={() => setIsComparing(false)}
-                                    onTouchStart={() => setIsComparing(true)}
-                                    onTouchEnd={() => setIsComparing(false)}
-                                    className="absolute bottom-4 right-4 bg-slate-900/80 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/10 hover:bg-black transition-colors z-20"
-                                >
-                                    {trans.compare_btn} (Hold)
+                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-slate-900/80 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/10 hover:bg-black transition-colors z-20">
+                                    {trans.compare_btn}
                                 </button>
                                </>
                            )}
@@ -284,7 +239,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                     ) : isYouTubeMode ? (
                         <div className="w-full h-full border-2 border-dashed border-red-500/20 rounded-3xl flex flex-col items-center justify-center bg-slate-900/50 backdrop-blur-sm group">
                             <div className="p-8 bg-red-500/5 rounded-full mb-6 group-hover:bg-red-500/10 transition-all duration-500">
-                                <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20 group-hover:opacity-60 group-hover:scale-110 transition-all" />
+                                <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
                             </div>
                             <h2 className="text-2xl font-black text-slate-600 tracking-tighter uppercase">Thumbnail Designer</h2>
                         </div>
@@ -302,47 +257,51 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
             {/* Controls Sidebar */}
             <div className="w-full lg:w-96 bg-slate-900/90 backdrop-blur-3xl border-l border-white/5 flex flex-col z-20 overflow-y-auto custom-scrollbar">
                 
-                {/* Histogram Widget */}
+                {/* Job Log (Recent History) */}
+                <div className="px-8 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Job Log</h4>
+                    <div className="flex gap-2">
+                      <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 bg-slate-800 rounded-md text-slate-400 hover:text-white disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
+                      <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 bg-slate-800 rounded-md text-slate-400 hover:text-white disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto mb-6">
+                    {history.past.slice(-3).map((h, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[10px] text-slate-600">
+                        <HistoryIcon className="w-3 h-3" />
+                        <span>{h.actionName}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 text-[10px] text-cyan-400 font-bold">
+                        <SparklesIcon className="w-3 h-3" />
+                        <span>{history.present.actionName}</span>
+                    </div>
+                  </div>
+                </div>
+
                 {!isYouTubeMode && activeFile && (
-                    <div className="px-8 pt-6">
+                    <div className="px-8">
                         <Histogram imageUrl={editedPreviewUrl || activeFile.previewUrl} />
                     </div>
                 )}
 
                 <div className="p-8 space-y-8 pt-2">
-                    {/* ... (Keep existing YouTube logic) ... */}
                     {isYouTubeMode && (
                         <div className="space-y-6 animate-fade-in-right">
-                             {/* ... Inputs for Youtube ... */}
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{trans.tool_youtube_topic}</label>
-                                <textarea 
-                                    rows={3}
-                                    value={thumbnailTopic} 
-                                    onChange={(e) => setThumbnailTopic(e.target.value)}
-                                    placeholder={trans.tool_youtube_topic_ph}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner"
-                                />
+                                <textarea rows={3} value={thumbnailTopic} onChange={(e) => setThumbnailTopic(e.target.value)} placeholder={trans.tool_youtube_topic_ph} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
-                                <input 
-                                    type="text" 
-                                    value={thumbnailText} 
-                                    onChange={(e) => setThumbnailText(e.target.value)}
-                                    placeholder={trans.tool_youtube_text_ph}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner"
-                                />
+                                <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner" />
                             </div>
                              <div className="flex items-center justify-between text-xs text-slate-400">
                                 <span>{trans.credits_cost}:</span>
                                 <span className="font-bold text-amber-400">10 {trans.credits_remaining}</span>
                              </div>
-                             <button 
-                                onClick={handleGenerateThumbnail} 
-                                disabled={isLoading}
-                                className="w-full py-5 bg-red-600 hover:bg-red-500 rounded-2xl text-sm font-black text-white shadow-2xl shadow-red-600/30 transition-all flex items-center justify-center gap-3 active:scale-[0.97] disabled:opacity-50"
-                            >
+                             <button onClick={handleGenerateThumbnail} disabled={isLoading} className="w-full py-5 bg-red-600 hover:bg-red-500 rounded-2xl text-sm font-black text-white shadow-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50">
                                 <SparklesIcon className="w-5 h-5" />
                                 {trans.tool_youtube_btn}
                             </button>
@@ -350,16 +309,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                     )}
 
                     {!isYouTubeMode && activeFile && (
-                         <ManualEditControls 
-                            edits={manualEdits}
-                            onEditChange={(k, v) => setManualEdits(p => ({...p, [k]: v}))}
-                            onReset={() => setManualEdits(INITIAL_EDITS)}
-                            exportOptions={exportOptions}
-                            onExportOptionsChange={setExportOptions}
-                            onRequestExport={handleManualExport}
-                            onStartManualCrop={() => {}}
-                            onSnapshot={() => {}}
-                         />
+                         <ManualEditControls edits={manualEdits} onEditChange={(k, v) => setManualEdits(p => ({...p, [k]: v}))} onReset={() => setManualEdits(INITIAL_EDITS)} exportOptions={exportOptions} onExportOptionsChange={setExportOptions} onRequestExport={handleManualExport} onStartManualCrop={() => {}} onSnapshot={() => {}} />
                     )}
                 </div>
             </div>

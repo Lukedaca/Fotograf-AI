@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useReducer } from 'react';
 
 // Views
 import HomeView from './components/HomeView';
+import DashboardView from './components/DashboardView';
 import UploadView from './components/UploadView';
 import EditorView from './components/EditorView';
 import BatchView from './components/BatchView';
@@ -13,10 +14,12 @@ import RAWConverterView from './components/RAWConverterView';
 import Sidebar from './components/Sidebar';
 import OnboardingModal from './components/OnboardingModal';
 import CreditPurchaseModal from './components/CreditPurchaseModal';
+import JobTemplateModal from './components/JobTemplateModal';
+import WorkflowStepper from './components/WorkflowStepper';
 import { XCircleIcon } from './components/icons';
 
 // Types
-import type { UploadedFile, View, EditorAction, History, HistoryEntry, Preset } from './types';
+import type { UploadedFile, View, EditorAction, History, HistoryEntry, Preset, JobTemplate, WorkflowStep } from './types';
 
 // Utils & Services
 import { clearLegacyKeys } from './utils/apiKey';
@@ -88,21 +91,20 @@ function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [userPresets, setUserPresets] = useState<Preset[]>([]);
   
-  // Market Logic
+  // Pipeline Logic
   const [credits, setCredits] = useState(50);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [currentJobTemplate, setCurrentJobTemplate] = useState<JobTemplate>('none');
 
   // --- Effects ---
 
-  // Security Startup Cleanup
   useEffect(() => {
     clearLegacyKeys();
   }, []);
 
-  // Load User Data & Check Admin
   useEffect(() => {
       const profile = getUserProfile();
       setUserPresets(profile.presets);
@@ -113,13 +115,11 @@ function App() {
           setShowOnboarding(true);
       }
       
-      // Notify if Admin mode is active
       if (profile.isAdmin) {
          setTimeout(() => addNotification("Admin Mode Activated: Unlimited Credits & Master Key Access", "info"), 1000);
       }
   }, []);
 
-  // Set permanent dark theme on mount
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
@@ -127,21 +127,17 @@ function App() {
   // --- Handlers ---
 
   const handleDeductCredits = (amount: number): boolean => {
-      // ADMIN BYPASS: Admin never uses credits
       if (isAdmin) return true;
-
       if (credits >= amount) {
           const newTotal = updateCredits(-amount);
           setCredits(newTotal);
           return true;
       }
-      // If not enough credits, show purchase modal
       setShowPurchaseModal(true);
       return false;
   };
 
   const handlePurchaseCredits = (amount: number) => {
-      // Mock purchase
       const newTotal = updateCredits(amount);
       setCredits(newTotal);
       setShowPurchaseModal(false);
@@ -177,7 +173,6 @@ function App() {
   };
 
   const handleNavigate = useCallback(({ view: newView, action }: { view: View; action?: string }) => {
-    // CRITICAL FIX: Allow navigation to editor if the action is youtube-thumbnail, even if files are empty
     if (newView === 'editor' && files.length === 0 && action && action !== 'youtube-thumbnail') {
         addNotification(t.editor_no_image, 'error');
         return;
@@ -214,10 +209,17 @@ function App() {
         currentFiles => [...currentFiles, ...validFiles],
         `Uploaded ${validFiles.length} files`
       );
-      setView('editor');
+      setShowTemplateModal(true); // Open Pipeline context selector
       addNotification(`${validFiles.length} ${t.notify_upload_success}`, 'info');
     }
   }, [addNotification, setFiles, t.msg_error, t.notify_upload_success]);
+
+  const handleTemplateSelect = (template: JobTemplate) => {
+    setCurrentJobTemplate(template);
+    setShowTemplateModal(false);
+    setView('batch'); // Start with culling after choosing template
+    setActiveAction({ action: 'culling', timestamp: Date.now() });
+  };
 
   const handleImageGenerated = useCallback((file: File) => {
     const previewUrl = URL.createObjectURL(file);
@@ -245,16 +247,29 @@ function App() {
       'Batch Edit'
     );
     setView('editor');
+    setActiveAction({ action: 'base-edit', timestamp: Date.now() });
   }, [setFiles]);
   
   const handleRawFilesConverted = useCallback((files: File[]) => {
       handleFilesSelected(files);
   }, [handleFilesSelected]);
 
+  const getPipelineStep = (): WorkflowStep => {
+    if (view === 'upload' || view === 'raw-converter') return 'import';
+    if (view === 'batch' && activeAction?.action === 'culling') return 'culling';
+    if (view === 'editor') {
+        if (activeAction?.action === 'export') return 'export';
+        if (activeAction?.action === 'retouch' || activeAction?.action === 'remove-object') return 'retouch';
+        return 'edit';
+    }
+    return 'import';
+  };
+
   const getPageTitle = () => {
-      if (view === 'upload') return t.upload_title;
+      if (view === 'dashboard') return t.nav_studio;
+      if (view === 'upload') return t.nav_upload;
       if (view === 'editor') return t.nav_studio;
-      if (view === 'batch') return t.batch_title;
+      if (view === 'batch') return t.nav_batch;
       if (view === 'generate') return t.gen_title;
       if (view === 'raw-converter') return t.raw_title;
       return t.app_title;
@@ -264,31 +279,57 @@ function App() {
     const headerProps = {
         title: getPageTitle(),
         onToggleSidebar: handleToggleSidebar,
-        credits: isAdmin ? 9999 : credits, // Visually show unlimited for Admin
+        credits: isAdmin ? 9999 : credits,
         onBuyCredits: () => setShowPurchaseModal(true),
-        onOpenApiKeyModal: () => {} // Deprecated functionality in this mode
     };
+
+    const stepper = <WorkflowStepper currentStep={getPipelineStep()} />;
 
     switch (view) {
       case 'home':
-        return <HomeView onEnterApp={() => setView('upload')} />;
+        return <HomeView onEnterApp={() => setView('dashboard')} />;
+      case 'dashboard':
+        return (
+          <DashboardView 
+            {...headerProps} 
+            onNavigate={handleNavigate} 
+            credits={credits} 
+            recentHistory={history.past}
+            onBuyCredits={() => setShowPurchaseModal(true)}
+          />
+        );
       case 'upload':
-        return <UploadView {...headerProps} onFilesSelected={handleFilesSelected} addNotification={addNotification} />;
+        return (
+          <div className="flex-1 flex flex-col h-full">
+            <UploadView {...headerProps} onFilesSelected={handleFilesSelected} addNotification={addNotification} />
+            {files.length > 0 && stepper}
+          </div>
+        );
       case 'editor':
-        return <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />;
+        return (
+          <div className="flex-1 flex flex-col h-full">
+            <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />
+            {stepper}
+          </div>
+        );
       case 'batch':
-        return <BatchView {...headerProps} files={files} onBatchComplete={handleBatchComplete} addNotification={addNotification} onSetFiles={setFiles} />;
+        return (
+          <div className="flex-1 flex flex-col h-full">
+            <BatchView {...headerProps} files={files} onBatchComplete={handleBatchComplete} addNotification={addNotification} onSetFiles={setFiles} mode={activeAction?.action === 'culling' ? 'culling' : 'batch'} />
+            {stepper}
+          </div>
+        );
       case 'generate':
         return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />;
       case 'raw-converter':
         return <RAWConverterView {...headerProps} addNotification={addNotification} onFilesConverted={handleRawFilesConverted} />;
       default:
-        return <UploadView {...headerProps} onFilesSelected={handleFilesSelected} addNotification={addNotification} />;
+        return <DashboardView {...headerProps} onNavigate={handleNavigate} credits={credits} recentHistory={history.past} onBuyCredits={() => setShowPurchaseModal(true)} />;
     }
   };
 
   if (view === 'home') {
-    return <HomeView onEnterApp={() => setView('upload')} />;
+    return <HomeView onEnterApp={() => setView('dashboard')} />;
   }
 
   return (
@@ -313,8 +354,15 @@ function App() {
             onClose={() => setShowPurchaseModal(false)}
             onPurchase={handlePurchaseCredits}
         />
+
+        {showTemplateModal && (
+          <JobTemplateModal 
+            onSelect={handleTemplateSelect} 
+            onClose={() => setShowTemplateModal(false)} 
+          />
+        )}
         
-        <div className="fixed top-5 right-5 z-[100] w-full max-w-sm space-y-3">
+        <div className="fixed top-5 right-5 z-[250] w-full max-w-sm space-y-3">
             {notifications.map(n => (
                 <div key={n.id} className={`flex items-start p-4 rounded-lg shadow-lg text-sm font-medium border animate-fade-in-right ${n.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-200'}`}>
                     <span className="flex-1">{n.message}</span>
