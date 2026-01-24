@@ -16,9 +16,10 @@ import {
     EraserIcon,
     AutoCropIcon
 } from './icons';
-import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View } from '../types';
+import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType } from '../types';
 import * as geminiService from '../services/geminiService';
 import { applyEditsAndExport } from '../utils/imageProcessor';
+import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface EditorViewProps {
@@ -38,6 +39,7 @@ interface EditorViewProps {
   onToggleSidebar: () => void;
   credits: number;
   onDeductCredits: (amount: number) => Promise<boolean>;
+  currentProjectId?: string | null;
 }
 
 const INITIAL_EDITS: ManualEdits = {
@@ -56,7 +58,7 @@ const INITIAL_EDITS: ManualEdits = {
 };
 
 const EditorView: React.FC<EditorViewProps> = (props) => {
-  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate, onOpenApiKeyModal } = props;
+  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate, onOpenApiKeyModal, currentProjectId } = props;
   const { t: trans } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -226,6 +228,25 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
         const url = createTrackedUrl(newFile);
         onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
+        try {
+            const { width, height } = await getImageDimensionsFromBlob(newFile);
+            await saveAIGalleryAsset({
+                id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                createdAt: new Date().toISOString(),
+                type: 'autopilot' as AIGalleryType,
+                prompt: 'Autopilot',
+                sourceFileId: activeFile.id,
+                projectId: currentProjectId || null,
+                fileName: newFile.name,
+                mimeType: newFile.type,
+                size: newFile.size,
+                width,
+                height,
+                blob: newFile,
+            });
+        } catch (e) {
+            console.error('Failed to save AI gallery item', e);
+        }
         addNotification(trans.msg_success, 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
@@ -273,6 +294,24 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         const newUploadedFile: UploadedFile = { id: `yt-${Date.now()}`, file, previewUrl, originalPreviewUrl: previewUrl };
         onSetFiles(prev => [...prev, newUploadedFile], 'YouTube Thumbnail Creation');
         onSetActiveFileId(newUploadedFile.id);
+        try {
+            const { width, height } = await getImageDimensionsFromBlob(file);
+            await saveAIGalleryAsset({
+                id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                createdAt: new Date().toISOString(),
+                type: 'youtube-thumbnail' as AIGalleryType,
+                prompt: `Topic: ${thumbnailTopic}\nText: ${thumbnailText}`,
+                projectId: currentProjectId || null,
+                fileName: file.name,
+                mimeType: file.type,
+                size: file.size,
+                width,
+                height,
+                blob: file,
+            });
+        } catch (e) {
+            console.error('Failed to save AI gallery item', e);
+        }
         addNotification(trans.msg_success, 'info');
     } catch (e) { addNotification(trans.msg_error, 'error'); }
     finally { setIsLoading(false); }

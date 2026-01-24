@@ -93,7 +93,7 @@ function getInlineImageData(response: any) {
  * Initializes and returns a GoogleGenAI instance.
  * 
  * SECURITY NOTE:
- * In this implementation, we are using a single API key (process.env.API_KEY) for the entire app.
+ * In this implementation, we are using a user-provided API key stored locally in the browser.
  * Access control is handled by the "Credit System" in the UI layer (App.tsx).
  * 
  * If the user has 0 credits, the UI blocks the call to these functions, ensuring
@@ -103,10 +103,10 @@ function getInlineImageData(response: any) {
  * where the key is never exposed to the client bundle.
  */
 const getGenAI = () => {
-    const apiKey = getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY;
+    const apiKey = getApiKey();
     
     if (!apiKey) {
-        console.error("API Key is missing in environment variables.");
+        console.error("API Key is missing in local storage.");
         throw new Error("API_KEY_MISSING");
     }
 

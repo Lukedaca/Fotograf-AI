@@ -25,6 +25,7 @@ const translations = {
     nav_youtube: "YouTube Miniatury",
     nav_projects: "Projekty",
     nav_clients: "Klienti",
+    nav_ai_gallery: "AI Galerie",
     
     pipeline_workflow: "Workflow",
     pipeline_creative: "Kreativa",
@@ -106,6 +107,18 @@ const translations = {
     dashboard_no_recent: "Zatím žádná historie.",
     dashboard_quick_autopilot: "Bleskový Autopilot",
     dashboard_quick_culling: "Chytrý výběr",
+
+    ai_gallery_search: "Hledat v galerii...",
+    ai_gallery_filter_all: "Vše",
+    ai_gallery_filter_generate: "Generované",
+    ai_gallery_filter_autopilot: "Autopilot",
+    ai_gallery_filter_youtube: "YouTube miniatury",
+    ai_gallery_loading: "Načítání galerie...",
+    ai_gallery_empty: "Zatím žádné AI výtvory.",
+    ai_gallery_download: "Stáhnout",
+    ai_gallery_delete: "Smazat",
+    ai_gallery_select_project: "Vybrat projekt",
+    ai_gallery_add_to_project: "Přidat do projektu",
 
     template_title: "Vyberte typ zakázky",
     template_desc: "Tímto nastavíte nejlepší AI modely a pipeline pro vaši práci.",
@@ -294,6 +307,7 @@ const translations = {
     nav_youtube: "YouTube Thumbnails",
     nav_projects: "Projects",
     nav_clients: "Clients",
+    nav_ai_gallery: "AI Gallery",
 
     pipeline_workflow: "Workflow",
     pipeline_creative: "Creative",
@@ -375,6 +389,18 @@ const translations = {
     dashboard_no_recent: "No history yet.",
     dashboard_quick_autopilot: "Quick Autopilot",
     dashboard_quick_culling: "Smart Culling",
+
+    ai_gallery_search: "Search gallery...",
+    ai_gallery_filter_all: "All",
+    ai_gallery_filter_generate: "Generated",
+    ai_gallery_filter_autopilot: "Autopilot",
+    ai_gallery_filter_youtube: "YouTube thumbnails",
+    ai_gallery_loading: "Loading gallery...",
+    ai_gallery_empty: "No AI creations yet.",
+    ai_gallery_download: "Download",
+    ai_gallery_delete: "Delete",
+    ai_gallery_select_project: "Select project",
+    ai_gallery_add_to_project: "Add to project",
 
     template_title: "Choose Job Type",
     template_desc: "This optimizes AI models and pipeline for your specific workload.",

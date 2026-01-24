@@ -92,6 +92,7 @@ export type View =
   | 'batch'
   | 'generate'
   | 'raw-converter'
+  | 'ai-gallery'
   | 'projects'
   | 'project-detail'
   | 'clients'
@@ -158,6 +159,24 @@ export interface Preset {
   id: string;
   name: string;
   edits: Omit<ManualEdits, 'cropRect'>;
+}
+
+export type AIGalleryType = 'generate' | 'autopilot' | 'youtube-thumbnail';
+
+export interface AIGalleryAsset {
+  id: string;
+  createdAt: string;
+  type: AIGalleryType;
+  prompt?: string;
+  sourceFileId?: string;
+  projectId?: string | null;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  width?: number;
+  height?: number;
+  tags?: string[];
+  blob: Blob;
 }
 
 export interface AutopilotTendencies {

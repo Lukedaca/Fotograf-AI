@@ -31,6 +31,8 @@ Jediné tlačítko spustí sekvenci úprav: *Autopilot + Chytrý ořez + Generov
 
 ## 🚀 Jak začít
 
-1.  Nastavte svůj Google API klíč jako proměnnou prostředí s názvem `API_KEY`.
+1.  Spusťte aplikaci a vložte svůj Google Gemini API klíč v UI (tlačítko **API** v horní liště).
 2.  Klíč můžete zdarma získat v [Google AI Studiu](https://aistudio.google.com/app/apikey).
-3.  Vstupte do studia a tvořte jako profesionál.
+3.  Klíč se ukládá pouze lokálně v prohlížeči.
+
+**Bezpečnost:** Nikdy necommitujte API klíče do repozitáře ani do buildů.

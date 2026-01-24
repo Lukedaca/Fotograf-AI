@@ -14,6 +14,7 @@ const ProjectDetailView = lazy(() => import('./components/ProjectDetailView'));
 const ClientsView = lazy(() => import('./components/ClientsView'));
 const ClientDetailView = lazy(() => import('./components/ClientDetailView'));
 const GalleryPreviewView = lazy(() => import('./components/GalleryPreviewView'));
+const AIGalleryView = lazy(() => import('./components/AIGalleryView'));
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -409,6 +410,7 @@ function App() {
       if (view === 'batch') return t.nav_batch;
       if (view === 'generate') return t.gen_title;
       if (view === 'raw-converter') return t.raw_title;
+      if (view === 'ai-gallery') return t.nav_ai_gallery;
       if (view === 'projects' || view === 'project-detail') return t.nav_projects;
       if (view === 'clients' || view === 'client-detail') return t.nav_clients;
       return t.app_title;
@@ -448,7 +450,7 @@ function App() {
       case 'editor':
         return (
           <div className="flex-1 flex flex-col h-full">
-            <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} />
+            <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} currentProjectId={currentProject?.id} />
             {stepper}
           </div>
         );
@@ -460,9 +462,11 @@ function App() {
           </div>
         );
       case 'generate':
-        return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} />;
+        return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} currentProjectId={currentProject?.id} />;
       case 'raw-converter':
         return <RAWConverterView {...headerProps} addNotification={addNotification} onFilesConverted={handleRawFilesConverted} />;
+      case 'ai-gallery':
+        return <AIGalleryView {...headerProps} />;
       case 'projects':
         return (
           <ProjectsView

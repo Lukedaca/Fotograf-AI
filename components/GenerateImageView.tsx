@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { generateImage } from '../services/geminiService';
 import { base64ToFile } from '../utils/imageProcessor';
+import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
+import type { AIGalleryType } from '../types';
 import { GenerateImageIcon, UploadIcon, XIcon, SparklesIcon } from './icons';
 import Header from './Header';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -23,10 +25,11 @@ interface GenerateImageViewProps {
     onImageGenerated: (file: File) => void;
     credits: number;
     onDeductCredits: (amount: number) => Promise<boolean>;
+    currentProjectId?: string | null;
 }
 
 const GenerateImageView: React.FC<GenerateImageViewProps> = ({ 
-    title, onOpenApiKeyModal, onToggleSidebar, onImageGenerated, credits, onDeductCredits 
+    title, onOpenApiKeyModal, onToggleSidebar, onImageGenerated, credits, onDeductCredits, currentProjectId
 }) => {
     const { t } = useTranslation();
     const [prompt, setPrompt] = useState('');
@@ -66,6 +69,25 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
         try {
             const base64Image = await generateImage(prompt);
             setGeneratedImage(`data:image/jpeg;base64,${base64Image}`);
+            try {
+                const file = await base64ToFile(base64Image, `${prompt.substring(0, 30).replace(/\s/g, '_') || 'generated'}.jpeg`, 'image/jpeg');
+                const { width, height } = await getImageDimensionsFromBlob(file);
+                await saveAIGalleryAsset({
+                    id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                    createdAt: new Date().toISOString(),
+                    type: 'generate' as AIGalleryType,
+                    prompt,
+                    projectId: currentProjectId || null,
+                    fileName: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    width,
+                    height,
+                    blob: file,
+                });
+            } catch (e) {
+                console.error('Failed to save AI gallery item', e);
+            }
         } catch (err) {
             const msg = getApiErrorMessage(err, t.msg_error);
             if (msg.toLowerCase().includes('api key') || msg.includes('API_KEY_MISSING')) {
