@@ -84,11 +84,64 @@ export type EditorAction = {
   timestamp: number;
 } | null;
 
-export type View = 'home' | 'dashboard' | 'upload' | 'editor' | 'batch' | 'generate' | 'raw-converter';
+export type View =
+  | 'home'
+  | 'dashboard'
+  | 'upload'
+  | 'editor'
+  | 'batch'
+  | 'generate'
+  | 'raw-converter'
+  | 'projects'
+  | 'project-detail'
+  | 'clients'
+  | 'client-detail'
+  | 'gallery-preview';
 
 export type JobTemplate = 'portrait' | 'event' | 'product' | 'social' | 'none';
 
 export type WorkflowStep = 'import' | 'culling' | 'edit' | 'retouch' | 'export';
+
+export type ProjectStatus = 'draft' | 'editing' | 'review' | 'delivered';
+
+export interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface GallerySettings {
+  published: boolean;
+  link?: string;
+  selectedFileIds: string[];
+  allowDownload: boolean;
+  expiresAt?: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: 'created' | 'uploaded' | 'edited' | 'published' | 'viewed' | 'downloaded';
+  timestamp: string;
+  description: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  clientId: string;
+  type: JobTemplate;
+  status: ProjectStatus;
+  date: string;
+  notes?: string;
+  files: UploadedFile[];
+  gallery: GallerySettings;
+  activity: ActivityEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface HistoryEntry {
   state: UploadedFile[];

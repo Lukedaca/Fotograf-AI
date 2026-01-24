@@ -52,6 +52,24 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, onClick, isCollapsed, is
   </button>
 );
 
+const DashboardIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5 flex-shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h6.5v6.5h-6.5zM13.75 3.75h6.5v4.5h-6.5zM13.75 10.25h6.5v10h-6.5zM3.75 12.25h6.5v8h-6.5z" />
+  </svg>
+);
+
+const FolderIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5 flex-shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5a2.25 2.25 0 012.25-2.25h4.19a2.25 2.25 0 011.6.66l1.2 1.2a2.25 2.25 0 001.6.66H18.75A2.25 2.25 0 0121 10v7.5A2.25 2.25 0 0118.75 19.75H5.25A2.25 2.25 0 013 17.5v-10z" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5 flex-shrink-0">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6.75a3 3 0 11-6 0 3 3 0 016 0zM4.5 19.5a5.25 5.25 0 0110.5 0v.75H4.5v-.75zM17.5 19.5a4.5 4.5 0 00-3.3-4.34" />
+  </svg>
+);
+
 const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, currentView, activeAction }: SidebarProps) => {
   const { t } = useTranslation();
 
@@ -61,6 +79,12 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
     { icon: <AutopilotIcon className="w-5 h-5 flex-shrink-0"/>, label: t.pipeline_step_edit, view: "editor" as View, action: "base-edit" },
     { icon: <EraserIcon className="w-5 h-5 flex-shrink-0"/>, label: t.pipeline_step_retouch, view: "editor" as View, action: "retouch" },
     { icon: <ExportIcon className="w-5 h-5 flex-shrink-0"/>, label: t.pipeline_step_export, view: "editor" as View, action: "export" },
+  ];
+
+  const crmTools = [
+    { icon: <DashboardIcon />, label: t.nav_studio, view: "dashboard" as View },
+    { icon: <FolderIcon />, label: t.nav_projects, view: "projects" as View },
+    { icon: <UsersIcon />, label: t.nav_clients, view: "clients" as View },
   ];
 
   const creativeTools = [
@@ -103,6 +127,23 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
           </div>
           
           <nav className="flex-grow flex flex-col space-y-8 overflow-y-auto p-4 custom-scrollbar">
+            {/* CRM Section */}
+            <div>
+              {!isCollapsed && <h2 className="px-4 mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">CRM</h2>}
+              {isCollapsed && <hr className="mb-4 border-slate-700/80" />}
+              <div className="space-y-1.5 relative">
+                {crmTools.map((item) => {
+                  const isActive =
+                    item.view === currentView ||
+                    (item.view === 'projects' && currentView === 'project-detail') ||
+                    (item.view === 'clients' && currentView === 'client-detail');
+                  return (
+                    <NavItem key={item.label} icon={item.icon} label={item.label} onClick={() => handleNavigation({ view: item.view, action: item.action })} isCollapsed={isCollapsed} isActive={isActive} />
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Workflow Section */}
             <div>
               {!isCollapsed && <h2 className="px-4 mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">{t.pipeline_workflow}</h2>}
