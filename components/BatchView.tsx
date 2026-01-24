@@ -22,6 +22,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set(files.map(f => f.id)));
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [failedFiles, setFailedFiles] = useState<string[]>([]);
 
   const selectedFiles = useMemo(() => files.filter(f => selectedFileIds.has(f.id)), [files, selectedFileIds]);
 
@@ -61,17 +62,35 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
 
   const handleRunCulling = async () => {
       if (files.length === 0) return;
+      setFailedFiles([]);
       setIsProcessing(true);
       setProgress({ current: 0, total: files.length });
+      const failures: string[] = [];
       for (const file of files) {
           try {
               const assessment = await assessQuality(file.file);
-              onSetFiles(curr => curr.map(f => f.id === file.id ? { ...f, assessment } : f), 'Smart Culling');
-          } catch (e) { console.error(e); }
+              onSetFiles(prev => prev.map(f => 
+                  f.id === file.id ? { ...f, assessment, isAnalyzing: false } : f
+              ), 'Smart Culling');
+          } catch (e) {
+              console.error(`Failed to assess ${file.file.name}:`, e);
+              failures.push(file.file.name);
+              onSetFiles(prev => prev.map(f => 
+                  f.id === file.id ? { ...f, isAnalyzing: false } : f
+              ), 'Assessment failed');
+          }
           finally { setProgress(prev => ({ ...prev, current: prev.current + 1 })); }
       }
       setIsProcessing(false);
-      addNotification(t.msg_success, 'info');
+      setFailedFiles(failures);
+      if (failures.length > 0) {
+          addNotification(
+              `${failures.length} files failed: ${failures.slice(0, 3).join(', ')}${failures.length > 3 ? '...' : ''}`,
+              'error'
+          );
+      } else {
+          addNotification(t.msg_success, 'info');
+      }
   };
 
   const selectBestPicks = () => {

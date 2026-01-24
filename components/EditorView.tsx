@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './Header';
 import ManualEditControls from './ManualEditControls';
 import Histogram from './Histogram';
@@ -37,7 +37,7 @@ interface EditorViewProps {
   onOpenApiKeyModal: () => void;
   onToggleSidebar: () => void;
   credits: number;
-  onDeductCredits: (amount: number) => boolean;
+  onDeductCredits: (amount: number) => Promise<boolean>;
 }
 
 const INITIAL_EDITS: ManualEdits = {
@@ -66,6 +66,17 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [exportOptions, setExportOptions] = useState({ format: 'jpeg', quality: 90, scale: 1 });
   const [isComparing, setIsComparing] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+
+  const createdUrlsRef = useRef<string[]>([]);
+  const createTrackedUrl = useCallback((blob: Blob) => {
+      const url = URL.createObjectURL(blob);
+      createdUrlsRef.current.push(url);
+      return url;
+  }, []);
+  const revokeTrackedUrl = useCallback((url: string) => {
+      URL.revokeObjectURL(url);
+      createdUrlsRef.current = createdUrlsRef.current.filter((item) => item !== url);
+  }, []);
   
   // YouTube Thumbnail State
   const [thumbnailTopic, setThumbnailTopic] = useState('');
@@ -78,59 +89,142 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
   // Voice Recognition
   useEffect(() => {
-      let recognition: any;
-      if (isVoiceActive) {
-          // @ts-ignore
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          if (SpeechRecognition) {
-              recognition = new SpeechRecognition();
-              recognition.continuous = true;
-              recognition.lang = language === 'cs' ? 'cs-CZ' : 'en-US';
-              recognition.onresult = (event: any) => {
-                  const last = event.results.length - 1;
-                  const command = event.results[last][0].transcript.toLowerCase().trim();
-                  if (command.includes('jas') || command.includes('brightness')) {
-                      if (command.includes('víc') || command.includes('up')) {
-                          setManualEdits(prev => ({...prev, brightness: Math.min(100, prev.brightness + 10)}));
-                      } else if (command.includes('méně') || command.includes('down')) {
-                           setManualEdits(prev => ({...prev, brightness: Math.max(-100, prev.brightness - 10)}));
-                      }
-                  } else if (command.includes('reset')) {
-                      setManualEdits(INITIAL_EDITS);
-                  }
-              };
-              recognition.start();
-          } else {
-              addNotification("Váš prohlížeč nepodporuje hlasové ovládání.", "error");
+      if (!isVoiceActive) return;
+
+      // @ts-ignore
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+          addNotification('Voice recognition not supported in this browser', 'error');
+          setIsVoiceActive(false);
+          return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = language === 'cs' ? 'cs-CZ' : 'en-US';
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+          if (!event.results || event.results.length === 0) return;
+          const last = event.results.length - 1;
+          const result = event.results[last];
+          if (!result || !result[0]) return;
+
+          const command = result[0].transcript.toLowerCase().trim();
+          if (!command) return;
+
+          if (command.includes('jas') || command.includes('brightness')) {
+              if (command.includes('víc') || command.includes('up')) {
+                  setManualEdits(prev => ({...prev, brightness: Math.min(100, prev.brightness + 10)}));
+              } else if (command.includes('méně') || command.includes('down')) {
+                   setManualEdits(prev => ({...prev, brightness: Math.max(-100, prev.brightness - 10)}));
+              }
+          } else if (command.includes('reset')) {
+              setManualEdits(INITIAL_EDITS);
+          }
+      };
+
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+          console.error('Speech recognition error:', event.error);
+          const errorMessages: Record<string, string> = {
+              'no-speech': 'No speech detected - try speaking louder',
+              'audio-capture': 'Microphone not available',
+              'not-allowed': 'Microphone permission denied',
+              'network': 'Network error - check connection',
+          };
+          const message = errorMessages[event.error] || `Voice error: ${event.error}`;
+          addNotification(message, 'error');
+          if (event.error === 'not-allowed' || event.error === 'audio-capture') {
               setIsVoiceActive(false);
           }
+      };
+
+      recognition.onend = () => {
+          if (isVoiceActive) {
+              try {
+                  recognition.start();
+              } catch (e) {
+                  // already started
+              }
+          }
+      };
+
+      try {
+          recognition.start();
+      } catch (e) {
+          addNotification('Failed to start voice recognition', 'error');
+          setIsVoiceActive(false);
       }
-      return () => { if (recognition) recognition.stop(); };
+
+      return () => {
+          try {
+              recognition.stop();
+          } catch (e) {
+              // already stopped
+          }
+      };
   }, [isVoiceActive, language, addNotification]);
 
   useEffect(() => {
+      return () => {
+          createdUrlsRef.current.forEach((url) => {
+              URL.revokeObjectURL(url);
+          });
+          createdUrlsRef.current = [];
+      };
+  }, []);
+
+  useEffect(() => {
+      return () => {
+          if (editedPreviewUrl && editedPreviewUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(editedPreviewUrl);
+          }
+      };
+  }, [editedPreviewUrl]);
+
+  useEffect(() => {
     if (!activeFile) return;
+
+    const currentFileId = activeFile.id;
+    const currentUrl = activeFile.originalPreviewUrl;
+    let isCancelled = false;
+
     const apply = async () => {
         try {
-            const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, { format: 'jpeg', quality: 90, scale: 0.5 });
-            const url = URL.createObjectURL(blob);
+            const blob = await applyEditsAndExport(
+                currentUrl,
+                manualEdits,
+                { format: 'jpeg', quality: 90, scale: 0.5 }
+            );
+            if (isCancelled) return;
+            const stillExists = files.find(f => f.id === currentFileId);
+            if (!stillExists) return;
+            const url = createTrackedUrl(blob);
             setEditedPreviewUrl(url);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            if (!isCancelled) {
+                console.error('Preview generation failed:', e);
+            }
+        }
     };
+
     const t = setTimeout(apply, 150);
-    return () => clearTimeout(t);
-  }, [activeFile, manualEdits]);
+    return () => {
+        isCancelled = true;
+        clearTimeout(t);
+    };
+  }, [activeFile?.id, activeFile?.originalPreviewUrl, manualEdits, files, createTrackedUrl]);
 
   const handleAutopilot = async () => {
     if (!activeFile) return;
     const COST = 3;
-    if (!onDeductCredits(COST)) return;
+    if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
     setLoadingMessage("AI analyzuje a vylepšuje váš snímek...");
     try {
         const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
-        const url = URL.createObjectURL(newFile);
+        const url = createTrackedUrl(newFile);
         onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
         addNotification(trans.msg_success, 'info');
     } catch (e) { addNotification(trans.msg_error, 'error'); }
@@ -142,13 +236,14 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     setIsLoading(true);
     try {
         const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
-        const url = URL.createObjectURL(blob);
+        const url = createTrackedUrl(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `edited_${activeFile.file.name.replace(/\.[^/.]+$/, "")}.${exportOptions.format === 'jpeg' ? 'jpg' : 'png'}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        revokeTrackedUrl(url);
         addNotification(trans.msg_success, 'info');
     } catch (e) { addNotification(trans.msg_error, 'error'); }
     finally { setIsLoading(false); }
@@ -157,12 +252,12 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const handleGenerateThumbnail = async () => {
     if (!thumbnailTopic.trim()) { addNotification(trans.tool_youtube_topic_ph, 'error'); return; }
     const COST = 10;
-    if (!onDeductCredits(COST)) return;
+    if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
     setLoadingMessage("Gemini 3 Pro navrhuje virální miniaturu...");
     try {
         const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { resolution: thumbnailResolution, format: thumbnailFormat });
-        const previewUrl = URL.createObjectURL(file);
+        const previewUrl = createTrackedUrl(file);
         const newUploadedFile: UploadedFile = { id: `yt-${Date.now()}`, file, previewUrl, originalPreviewUrl: previewUrl };
         onSetFiles(prev => [...prev, newUploadedFile], 'YouTube Thumbnail Creation');
         onSetActiveFileId(newUploadedFile.id);

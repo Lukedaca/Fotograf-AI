@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
 
 // Views
 import HomeView from './components/HomeView';
@@ -107,6 +107,7 @@ function App() {
   const [currentJobTemplate, setCurrentJobTemplate] = useState<JobTemplate>('none');
   const [currentClientId, setCurrentClientId] = useState<string | null>(null);
   const [galleryProjectId, setGalleryProjectId] = useState<string | null>(null);
+  const creditOperationInProgress = useRef(false);
 
   // --- Effects ---
 
@@ -181,16 +182,28 @@ function App() {
 
   // --- Handlers ---
 
-  const handleDeductCredits = (amount: number): boolean => {
+  const handleDeductCredits = useCallback(async (amount: number): Promise<boolean> => {
       if (isAdmin) return true;
-      if (credits >= amount) {
-          const newTotal = updateCredits(-amount);
-          setCredits(newTotal);
-          return true;
+      if (creditOperationInProgress.current) {
+        console.log('Credit operation already in progress');
+        return false;
       }
-      setShowPurchaseModal(true);
-      return false;
-  };
+
+      creditOperationInProgress.current = true;
+      try {
+        const currentProfile = getUserProfile();
+        const currentCredits = currentProfile.credits;
+        if (currentCredits >= amount) {
+            const newTotal = updateCredits(-amount);
+            setCredits(newTotal);
+            return true;
+        }
+        setShowPurchaseModal(true);
+        return false;
+      } finally {
+        creditOperationInProgress.current = false;
+      }
+  }, [isAdmin]);
 
   const handlePurchaseCredits = (amount: number) => {
       const newTotal = updateCredits(amount);
@@ -221,6 +234,15 @@ function App() {
     setTimeout(() => {
       setNotifications(n => n.filter(notif => notif.id !== id));
     }, 5000);
+  }, []);
+
+  const cleanupFileUrls = useCallback((filesToClean: UploadedFile[]) => {
+    filesToClean.forEach(file => {
+      if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+      if (file.originalPreviewUrl && file.originalPreviewUrl !== file.previewUrl) {
+        URL.revokeObjectURL(file.originalPreviewUrl);
+      }
+    });
   }, []);
   
   const handleToggleSidebar = () => {
@@ -279,23 +301,27 @@ function App() {
   }, [files.length, addNotification, t.editor_no_image, projects, setCurrentProject, setFiles]);
 
   const handleFilesSelected = useCallback(async (selectedFiles: File[]) => {
-    const validFiles: UploadedFile[] = [];
-    const promises = selectedFiles.map(async file => {
-      try {
-        const normalizedFile = await normalizeImageFile(file);
-        const previewUrl = URL.createObjectURL(normalizedFile);
-        validFiles.push({
-          id: `${Date.now()}-${Math.random()}`,
-          file: normalizedFile,
-          previewUrl: previewUrl,
-          originalPreviewUrl: previewUrl,
-        });
-      } catch (error) {
-        addNotification(`${t.msg_error}: ${file.name}`, 'error');
-      }
-    });
+    const results = await Promise.allSettled(
+      selectedFiles.map(async (file): Promise<UploadedFile | null> => {
+        try {
+          const normalizedFile = await normalizeImageFile(file);
+          const previewUrl = URL.createObjectURL(normalizedFile);
+          return {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            file: normalizedFile,
+            previewUrl: previewUrl,
+            originalPreviewUrl: previewUrl,
+          };
+        } catch (error) {
+          addNotification(`${t.msg_error}: ${file.name}`, 'error');
+          return null;
+        }
+      })
+    );
 
-    await Promise.all(promises);
+    const validFiles = results
+      .filter((r): r is PromiseFulfilledResult<UploadedFile> => r.status === 'fulfilled' && r.value !== null)
+      .map(r => r.value);
 
     if (validFiles.length > 0) {
       setFiles(
@@ -347,6 +373,7 @@ function App() {
     setFiles(
       currentFiles => currentFiles.map(cf => {
         if (updatedFilesMap.has(cf.id)) {
+          cleanupFileUrls([cf]);
           const newFile = updatedFilesMap.get(cf.id)!;
           return { ...cf, file: newFile.file, previewUrl: URL.createObjectURL(newFile.file) };
         }
@@ -356,7 +383,7 @@ function App() {
     );
     setView('editor');
     setActiveAction({ action: 'base-edit', timestamp: Date.now() });
-  }, [setFiles]);
+  }, [cleanupFileUrls, setFiles]);
   
   const handleRawFilesConverted = useCallback((files: File[]) => {
       handleFilesSelected(files);

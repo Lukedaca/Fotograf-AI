@@ -3,6 +3,91 @@ import { GoogleGenAI } from '@google/genai';
 import type { AnalysisResult, Language, QualityAssessment } from '../types';
 import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
 
+function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
+    if (!text) {
+        throw new Error(`${fallbackError}: Empty response from AI`);
+    }
+
+    try {
+        let cleanText = text.trim();
+        if (cleanText.startsWith('```json')) {
+            cleanText = cleanText.slice(7);
+        }
+        if (cleanText.startsWith('```')) {
+            cleanText = cleanText.slice(3);
+        }
+        if (cleanText.endsWith('```')) {
+            cleanText = cleanText.slice(0, -3);
+        }
+        cleanText = cleanText.trim();
+        return JSON.parse(cleanText) as T;
+    } catch (e) {
+        console.error('Failed to parse AI response:', text);
+        throw new Error(`${fallbackError}: Invalid JSON from AI`);
+    }
+}
+
+async function withRetry<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelayMs: number = 1000
+): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error as Error;
+            const errorMessage = lastError.message.toLowerCase();
+            if (
+                errorMessage.includes('invalid api key') ||
+                errorMessage.includes('blocked') ||
+                errorMessage.includes('invalid json')
+            ) {
+                throw lastError;
+            }
+
+            if (attempt < maxRetries - 1) {
+                const delay = baseDelayMs * Math.pow(2, attempt);
+                console.log(`AI request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    throw lastError || new Error('AI request failed after retries');
+}
+
+function getInlineImageData(response: any) {
+    if (!response) {
+        throw new Error('AI service unavailable - no response received');
+    }
+
+    if (!response.candidates || response.candidates.length === 0) {
+        if (response.promptFeedback?.blockReason) {
+            throw new Error(`AI blocked request: ${response.promptFeedback.blockReason}`);
+        }
+        throw new Error('AI returned no results - may be rate limited or model unavailable');
+    }
+
+    const candidate = response.candidates[0];
+    if (!candidate.content || !candidate.content.parts) {
+        throw new Error('AI response has no content - unexpected format');
+    }
+
+    const imagePart = candidate.content.parts.find((part: any) => part.inlineData);
+    if (!imagePart) {
+        throw new Error('AI did not generate image data - try again or use different settings');
+    }
+
+    if (!imagePart.inlineData || !imagePart.inlineData.data) {
+        throw new Error('AI image data is empty - generation may have failed');
+    }
+
+    return imagePart.inlineData;
+}
+
 /**
  * Initializes and returns a GoogleGenAI instance.
  * 
@@ -35,101 +120,106 @@ export const generateYouTubeThumbnail = async (
     textOverlay: string, 
     options: { resolution: '1K' | '2K' | '4K', format: 'jpeg' | 'png' | 'webp' }
 ): Promise<{ file: File }> => {
-    const ai = getGenAI();
-    
-    const prompt = `Create a ultra-high quality, viral YouTube Thumbnail from scratch. 
-    Subject: ${topic}. 
-    MANDATORY Text Overlay: "${textOverlay}". 
-    Composition: High-contrast, vibrant saturated colors, cinematic rim lighting, 
-    optimized for maximum Click-Through Rate (CTR). Typography should be huge, bold, and 3D. 
-    Ensure a professional creator aesthetic.`;
+    return withRetry(async () => {
+        const ai = getGenAI();
+        
+        const prompt = `Create a ultra-high quality, viral YouTube Thumbnail from scratch. 
+        Subject: ${topic}. 
+        MANDATORY Text Overlay: "${textOverlay}". 
+        Composition: High-contrast, vibrant saturated colors, cinematic rim lighting, 
+        optimized for maximum Click-Through Rate (CTR). Typography should be huge, bold, and 3D. 
+        Ensure a professional creator aesthetic.`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
-        contents: { parts: [{ text: prompt }] },
-        config: { 
-            imageConfig: { 
-                aspectRatio: "16:9", 
-                imageSize: options.resolution 
-            } 
-        }
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-pro-image-preview',
+            contents: { parts: [{ text: prompt }] },
+            config: { 
+                imageConfig: { 
+                    aspectRatio: "16:9", 
+                    imageSize: options.resolution 
+                } 
+            }
+        });
+
+        const imagePart = getInlineImageData(response);
+    
+        let mimeType = 'image/jpeg';
+        let extension = 'jpg';
+        if (options.format === 'png') { mimeType = 'image/png'; extension = 'png'; }
+        else if (options.format === 'webp') { mimeType = 'image/webp'; extension = 'webp'; }
+
+        return { 
+            file: await base64ToFile(
+                imagePart.data, 
+                `yt_thumb_${Date.now()}.${extension}`, 
+                mimeType
+            ) 
+        };
     });
-
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-    if (!imagePart || !imagePart.inlineData) {
-        throw new Error('AI Engine failed to render the thumbnail. Please try a different prompt.');
-    }
-    
-    let mimeType = 'image/jpeg';
-    let extension = 'jpg';
-    if (options.format === 'png') { mimeType = 'image/png'; extension = 'png'; }
-    else if (options.format === 'webp') { mimeType = 'image/webp'; extension = 'webp'; }
-
-    return { 
-        file: await base64ToFile(
-            imagePart.inlineData.data, 
-            `yt_thumb_${Date.now()}.${extension}`, 
-            mimeType
-        ) 
-    };
 };
 
 export const analyzeImage = async (file: File, language: Language = 'cs'): Promise<AnalysisResult> => {
-  const ai = getGenAI();
-  const base64Image = await fileToBase64(file);
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: {
-      parts: [
-        { inlineData: { mimeType: file.type, data: base64Image } },
-        { text: `Analyze this photograph. Provide description, suggestions, technical info. Respond in ${language === 'cs' ? 'Czech' : 'English'}.` },
-      ],
-    },
-    config: { responseMimeType: 'application/json' }
+  return withRetry(async () => {
+    const ai = getGenAI();
+    const base64Image = await fileToBase64(file);
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: file.type, data: base64Image } },
+          { text: `Analyze this photograph. Provide description, suggestions, technical info. Respond in ${language === 'cs' ? 'Czech' : 'English'}.` },
+        ],
+      },
+      config: { responseMimeType: 'application/json' }
+    });
+    return safeJsonParse<AnalysisResult>(response.text, 'Image analysis failed');
   });
-  return JSON.parse(response.text) as AnalysisResult;
 };
 
 export const autopilotImage = async (file: File): Promise<{ file: File }> => {
-    const ai = getGenAI();
-    const base64Image = await fileToBase64(file);
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-            parts: [
-                { inlineData: { data: base64Image, mimeType: file.type } },
-                { text: "Enhance this photo professionally focusing on color and dynamic range." },
-            ],
-        }
+    return withRetry(async () => {
+        const ai = getGenAI();
+        const base64Image = await fileToBase64(file);
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: file.type } },
+                    { text: "Enhance this photo professionally focusing on color and dynamic range." },
+                ],
+            }
+        });
+        const imagePart = getInlineImageData(response);
+        return { file: await base64ToFile(imagePart.data, `auto_${file.name}`, imagePart.mimeType) };
     });
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-    if (!imagePart || !imagePart.inlineData) throw new Error('Autopilot failed.');
-    return { file: await base64ToFile(imagePart.inlineData.data, `auto_${file.name}`, imagePart.inlineData.mimeType) };
 };
 
 export const generateImage = async (prompt: string): Promise<string> => {
-  const ai = getGenAI();
-  const response = await ai.models.generateContent({ 
-      model: 'gemini-3-pro-image-preview', 
-      contents: { parts: [{ text: prompt }] } 
+  return withRetry(async () => {
+    const ai = getGenAI();
+    const response = await ai.models.generateContent({ 
+        model: 'gemini-3-pro-image-preview', 
+        contents: { parts: [{ text: prompt }] } 
+    });
+    const imagePart = getInlineImageData(response);
+    return imagePart.data;
   });
-  const imagePart = response.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-  if (!imagePart || !imagePart.inlineData) throw new Error('Generation failed.');
-  return imagePart.inlineData.data;
 };
 
 export const assessQuality = async (file: File): Promise<QualityAssessment> => {
-    const ai = getGenAI();
-    const base64Image = await fileToBase64(file);
-    const response = await ai.models.generateContent({
-        model: 'gemini-flash-lite-latest',
-        contents: {
-            parts: [
-                { inlineData: { data: base64Image, mimeType: file.type } },
-                { text: "Rate photo technical quality 0-100 and give flags like Blurry, Sharp, Noise etc." }
-            ]
-        },
-        config: { responseMimeType: 'application/json' }
+    return withRetry(async () => {
+        const ai = getGenAI();
+        const base64Image = await fileToBase64(file);
+        const response = await ai.models.generateContent({
+            model: 'gemini-flash-lite-latest',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: file.type } },
+                    { text: "Rate photo technical quality 0-100 and give flags like Blurry, Sharp, Noise etc." }
+                ]
+            },
+            config: { responseMimeType: 'application/json' }
+        });
+        return safeJsonParse<QualityAssessment>(response.text, 'Quality assessment failed');
     });
-    return JSON.parse(response.text) as QualityAssessment;
 };

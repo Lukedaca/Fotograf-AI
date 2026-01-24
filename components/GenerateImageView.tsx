@@ -22,7 +22,7 @@ interface GenerateImageViewProps {
     onToggleSidebar: () => void;
     onImageGenerated: (file: File) => void;
     credits: number;
-    onDeductCredits: (amount: number) => boolean;
+    onDeductCredits: (amount: number) => Promise<boolean>;
 }
 
 const GenerateImageView: React.FC<GenerateImageViewProps> = ({ 
@@ -55,7 +55,7 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
         if (!prompt.trim()) return;
 
         const COST = 5;
-        if (!onDeductCredits(COST)) {
+        if (!await onDeductCredits(COST)) {
              setError(`${t.credits_low}. ${t.credits_cost}: ${COST}`);
              return;
         }

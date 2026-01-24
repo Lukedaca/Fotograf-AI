@@ -93,14 +93,35 @@ export const normalizeImageFile = (
 
 import type { ManualEdits, WatermarkSettings } from '../types';
 
+export type HistogramData = { r: number[]; g: number[]; b: number[]; l: number[] };
+
+export async function calculateHistogramAsync(imageData: ImageData): Promise<HistogramData> {
+    return new Promise((resolve, reject) => {
+        try {
+            const worker = new Worker(new URL('../workers/histogram.worker.ts', import.meta.url), { type: 'module' });
+            worker.onmessage = (e) => {
+                resolve(e.data);
+                worker.terminate();
+            };
+            worker.onerror = (err) => {
+                worker.terminate();
+                reject(err);
+            };
+            worker.postMessage(imageData);
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
 /**
  * Calculates histogram data from an image source.
  */
-export const calculateHistogram = (imageUrl: string): Promise<{ r: number[], g: number[], b: number[], l: number[] }> => {
+export const calculateHistogram = (imageUrl: string): Promise<HistogramData> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.onload = () => {
+        img.onload = async () => {
             const canvas = document.createElement('canvas');
             // Resize for faster processing, 500px is enough for histogram
             const scale = Math.min(1, 500 / Math.max(img.width, img.height));
@@ -110,22 +131,27 @@ export const calculateHistogram = (imageUrl: string): Promise<{ r: number[], g: 
             if (!ctx) return reject();
             
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            
-            const r = new Array(256).fill(0);
-            const g = new Array(256).fill(0);
-            const b = new Array(256).fill(0);
-            const l = new Array(256).fill(0);
-            
-            for (let i = 0; i < data.length; i += 4) {
-                r[data[i]]++;
-                g[data[i+1]]++;
-                b[data[i+2]]++;
-                // Rec. 709 Luminance
-                const lum = Math.round(0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2]);
-                l[Math.min(255, lum)]++;
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            try {
+                const hist = await calculateHistogramAsync(imageData);
+                resolve(hist);
+            } catch (error) {
+                const data = imageData.data;
+                const r = new Array(256).fill(0);
+                const g = new Array(256).fill(0);
+                const b = new Array(256).fill(0);
+                const l = new Array(256).fill(0);
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    r[data[i]]++;
+                    g[data[i+1]]++;
+                    b[data[i+2]]++;
+                    const lum = Math.round(0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2]);
+                    l[Math.min(255, lum)]++;
+                }
+                resolve({ r, g, b, l });
             }
-            resolve({ r, g, b, l });
         };
         img.onerror = reject;
         img.src = imageUrl;

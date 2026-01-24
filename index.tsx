@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ProjectProvider } from './contexts/ProjectContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import './styles.css';
 
 const rootElement = document.getElementById('root');
@@ -14,10 +15,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <LanguageProvider>
-      <ProjectProvider>
-        <App />
-      </ProjectProvider>
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <ProjectProvider>
+          <App />
+        </ProjectProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

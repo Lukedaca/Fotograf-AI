@@ -45,17 +45,10 @@ export const getUserProfile = (): UserProfile => {
       };
     }
 
-    // --- SECURITY: Check for Admin URL Parameter ---
-    // Usage: Open app with ?role=admin to activate admin mode permanently on this device
-    if (typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('role') === 'admin') {
-            profile.isAdmin = true;
-            saveUserProfile(profile);
-            // Clean URL
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-            window.history.pushState({path:newUrl},'',newUrl);
-        }
+    // Admin mode only via environment variable (build time)
+    // NEVER allow URL parameter admin access
+    if (import.meta.env.DEV && import.meta.env.VITE_ADMIN_MODE === 'true') {
+        profile.isAdmin = true;
     }
     
     return profile;

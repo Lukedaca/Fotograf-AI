@@ -21,15 +21,32 @@ interface StoredData {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
+function isValidStoredData(data: unknown): data is StoredData {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  if (!Array.isArray(obj.clients)) return false;
+  if (!Array.isArray(obj.projects)) return false;
+  for (const client of obj.clients) {
+    if (!client || typeof client !== 'object') return false;
+    if (typeof (client as Client).id !== 'string') return false;
+    if (typeof (client as Client).name !== 'string') return false;
+  }
+  return true;
+}
+
 const getInitialData = (): StoredData => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as StoredData;
-      return {
-        clients: parsed.clients || mockClients,
-        projects: parsed.projects || mockProjects,
-      };
+      const parsed = JSON.parse(stored);
+      if (isValidStoredData(parsed)) {
+        return {
+          clients: parsed.clients,
+          projects: parsed.projects,
+        };
+      }
+      console.warn('Invalid CRM data schema, resetting to defaults');
+      localStorage.removeItem(STORAGE_KEY);
     }
   } catch (error) {
     console.error('Failed to parse CRM storage.', error);
