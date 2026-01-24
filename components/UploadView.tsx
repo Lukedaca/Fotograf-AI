@@ -7,6 +7,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 
 interface UploadViewProps {
   onFilesSelected: (files: File[]) => void;
+  projectName?: string;
   // Props for the Header
   title: string;
   onOpenApiKeyModal: () => void;
@@ -16,6 +17,7 @@ interface UploadViewProps {
 
 const UploadView: React.FC<UploadViewProps> = ({ 
   onFilesSelected, 
+  projectName,
   title, 
   onOpenApiKeyModal,
   onToggleSidebar,
@@ -147,6 +149,11 @@ const UploadView: React.FC<UploadViewProps> = ({
             </div>
             
             <div className="text-center z-10">
+                {projectName && (
+                  <div className="mb-6 text-xs uppercase tracking-[0.2em] text-cyan-300/80">
+                    {t.crm_uploading_to} <span className="text-white">{projectName}</span>
+                  </div>
+                )}
                 <UploadIcon 
                     className="mx-auto h-20 w-20 text-slate-500 mb-6 transition-all duration-500 ease-out" 
                     style={{ transform: isDragging ? 'scale(1.15) translateY(-12px)' : 'scale(1)', filter: isDragging ? `drop-shadow(0 0 15px #22d3ee)` : 'none' }}

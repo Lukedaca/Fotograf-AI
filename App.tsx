@@ -9,6 +9,11 @@ import EditorView from './components/EditorView';
 import BatchView from './components/BatchView';
 import GenerateImageView from './components/GenerateImageView';
 import RAWConverterView from './components/RAWConverterView';
+import ProjectsView from './components/ProjectsView';
+import ProjectDetailView from './components/ProjectDetailView';
+import ClientsView from './components/ClientsView';
+import ClientDetailView from './components/ClientDetailView';
+import GalleryPreviewView from './components/GalleryPreviewView';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -26,6 +31,7 @@ import { clearLegacyKeys } from './utils/apiKey';
 import { normalizeImageFile } from './utils/imageProcessor';
 import { getPresets, getUserProfile, updateCredits, markOnboardingSeen } from './services/userProfileService';
 import { useTranslation } from './contexts/LanguageContext';
+import { useProject } from './contexts/ProjectContext';
 
 
 // --- History Reducer ---
@@ -78,6 +84,7 @@ interface Notification {
 
 function App() {
   const { t } = useTranslation();
+  const { projects, currentProject, setCurrentProject, updateProject } = useProject();
   const [view, setView] = useState<View>('home');
   const [history, dispatchHistory] = useReducer(historyReducer, initialHistoryState);
   const { present: { state: files } } = history;
@@ -98,6 +105,8 @@ function App() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [currentJobTemplate, setCurrentJobTemplate] = useState<JobTemplate>('none');
+  const [currentClientId, setCurrentClientId] = useState<string | null>(null);
+  const [galleryProjectId, setGalleryProjectId] = useState<string | null>(null);
 
   // --- Effects ---
 
@@ -123,6 +132,52 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
+
+  useEffect(() => {
+    const syncFromLocation = () => {
+      if (typeof window === 'undefined') return;
+      const path = window.location.pathname;
+      if (path.startsWith('/projects/')) {
+        const id = path.split('/')[2];
+        const project = projects.find((item) => item.id === id);
+        if (project) {
+          setCurrentProject(project);
+        }
+        setGalleryProjectId(null);
+        setView('project-detail');
+        return;
+      }
+      if (path === '/projects') {
+        setCurrentProject(null);
+        setGalleryProjectId(null);
+        setView('projects');
+        return;
+      }
+      if (path.startsWith('/clients/')) {
+        const id = path.split('/')[2];
+        setCurrentClientId(id || null);
+        setGalleryProjectId(null);
+        setView('client-detail');
+        return;
+      }
+      if (path === '/clients') {
+        setCurrentProject(null);
+        setGalleryProjectId(null);
+        setView('clients');
+        return;
+      }
+      if (path.startsWith('/gallery/')) {
+        const id = path.split('/')[2];
+        setGalleryProjectId(id || null);
+        setView('gallery-preview');
+        return;
+      }
+    };
+
+    syncFromLocation();
+    window.addEventListener('popstate', syncFromLocation);
+    return () => window.removeEventListener('popstate', syncFromLocation);
+  }, [projects, setCurrentProject]);
 
   // --- Handlers ---
 
@@ -172,10 +227,48 @@ function App() {
     setIsSidebarOpen(prev => !prev);
   };
 
-  const handleNavigate = useCallback(({ view: newView, action }: { view: View; action?: string }) => {
+  const handleNavigate = useCallback(({ view: newView, action, id }: { view: View; action?: string; id?: string }) => {
     if (newView === 'editor' && files.length === 0 && action && action !== 'youtube-thumbnail') {
         addNotification(t.editor_no_image, 'error');
         return;
+    }
+    if (newView === 'projects') {
+      setCurrentProject(null);
+      setCurrentClientId(null);
+      setGalleryProjectId(null);
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/projects');
+      }
+    }
+    if (newView === 'clients') {
+      setCurrentProject(null);
+      setCurrentClientId(null);
+      setGalleryProjectId(null);
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/clients');
+      }
+    }
+    if (newView === 'project-detail' && id) {
+      const project = projects.find((item) => item.id === id);
+      if (project) {
+        setCurrentProject(project);
+        setFiles(project.files, 'Loaded project files');
+      }
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/projects/${id}`);
+      }
+    }
+    if (newView === 'client-detail' && id) {
+      setCurrentClientId(id);
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/clients/${id}`);
+      }
+    }
+    if (newView === 'gallery-preview' && id) {
+      setGalleryProjectId(id);
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/gallery/${id}`);
+      }
     }
     setView(newView);
     if (action) {
@@ -183,7 +276,7 @@ function App() {
     } else {
       setActiveAction(null);
     }
-  }, [files.length, addNotification, t.editor_no_image]);
+  }, [files.length, addNotification, t.editor_no_image, projects, setCurrentProject, setFiles]);
 
   const handleFilesSelected = useCallback(async (selectedFiles: File[]) => {
     const validFiles: UploadedFile[] = [];
@@ -211,8 +304,23 @@ function App() {
       );
       setShowTemplateModal(true); // Open Pipeline context selector
       addNotification(`${validFiles.length} ${t.notify_upload_success}`, 'info');
+      if (currentProject) {
+        updateProject(currentProject.id, {
+          files: [...currentProject.files, ...validFiles],
+          status: 'editing',
+          activity: [
+            ...currentProject.activity,
+            {
+              id: `a-${Date.now()}`,
+              type: 'uploaded',
+              timestamp: new Date().toISOString(),
+              description: `${validFiles.length} ${t.notify_upload_success}`,
+            },
+          ],
+        });
+      }
     }
-  }, [addNotification, setFiles, t.msg_error, t.notify_upload_success]);
+  }, [addNotification, setFiles, t.msg_error, t.notify_upload_success, currentProject, updateProject]);
 
   const handleTemplateSelect = (template: JobTemplate) => {
     setCurrentJobTemplate(template);
@@ -272,6 +380,8 @@ function App() {
       if (view === 'batch') return t.nav_batch;
       if (view === 'generate') return t.gen_title;
       if (view === 'raw-converter') return t.raw_title;
+      if (view === 'projects' || view === 'project-detail') return t.nav_projects;
+      if (view === 'clients' || view === 'client-detail') return t.nav_clients;
       return t.app_title;
   }
 
@@ -301,7 +411,7 @@ function App() {
       case 'upload':
         return (
           <div className="flex-1 flex flex-col h-full">
-            <UploadView {...headerProps} onFilesSelected={handleFilesSelected} addNotification={addNotification} />
+            <UploadView {...headerProps} onFilesSelected={handleFilesSelected} addNotification={addNotification} projectName={currentProject?.name} />
             {files.length > 0 && stepper}
           </div>
         );
@@ -323,10 +433,79 @@ function App() {
         return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />;
       case 'raw-converter':
         return <RAWConverterView {...headerProps} addNotification={addNotification} onFilesConverted={handleRawFilesConverted} />;
+      case 'projects':
+        return (
+          <ProjectsView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            onOpenProject={(id) => handleNavigate({ view: 'project-detail', id })}
+            onStartUploadForProject={(id) => {
+              const project = projects.find((item) => item.id === id);
+              if (project) {
+                setCurrentProject(project);
+              }
+              handleNavigate({ view: 'upload' });
+            }}
+          />
+        );
+      case 'project-detail':
+        return currentProject ? (
+          <ProjectDetailView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            projectId={currentProject.id}
+            onStartUpload={() => handleNavigate({ view: 'upload' })}
+            onOpenEditor={(fileId) => {
+              setActiveFileId(fileId);
+              setView('editor');
+            }}
+            onOpenGalleryPreview={() => handleNavigate({ view: 'gallery-preview', id: currentProject.id })}
+          />
+        ) : (
+          <ProjectsView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            onOpenProject={(id) => handleNavigate({ view: 'project-detail', id })}
+            onStartUploadForProject={(id) => {
+              const project = projects.find((item) => item.id === id);
+              if (project) {
+                setCurrentProject(project);
+              }
+              handleNavigate({ view: 'upload' });
+            }}
+          />
+        );
+      case 'clients':
+        return (
+          <ClientsView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            onOpenClient={(id) => handleNavigate({ view: 'client-detail', id })}
+          />
+        );
+      case 'client-detail':
+        return currentClientId ? (
+          <ClientDetailView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            clientId={currentClientId}
+            onOpenProject={(id) => handleNavigate({ view: 'project-detail', id })}
+          />
+        ) : (
+          <ClientsView
+            title={getPageTitle()}
+            onToggleSidebar={handleToggleSidebar}
+            onOpenClient={(id) => handleNavigate({ view: 'client-detail', id })}
+          />
+        );
       default:
         return <DashboardView {...headerProps} onNavigate={handleNavigate} credits={credits} recentHistory={history.past} onBuyCredits={() => setShowPurchaseModal(true)} />;
     }
   };
+
+  if (view === 'gallery-preview' && galleryProjectId) {
+    return <GalleryPreviewView projectId={galleryProjectId} />;
+  }
 
   if (view === 'home') {
     return <HomeView onEnterApp={() => setView('dashboard')} />;
