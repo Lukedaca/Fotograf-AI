@@ -44,6 +44,11 @@ interface ManualEditControlsProps {
   onRequestExport: () => void;
   onStartManualCrop: () => void; // Trigger for classic crop
   onSnapshot: () => void; // Request to save current state to history
+  cropRef?: React.RefObject<HTMLDivElement>;
+  lightRef?: React.RefObject<HTMLDivElement>;
+  colorRef?: React.RefObject<HTMLDivElement>;
+  detailRef?: React.RefObject<HTMLDivElement>;
+  exportRef?: React.RefObject<HTMLDivElement>;
 }
 
 const ManualEditControls: React.FC<ManualEditControlsProps> = ({ 
@@ -54,7 +59,12 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
     onExportOptionsChange,
     onRequestExport,
     onStartManualCrop,
-    onSnapshot
+    onSnapshot,
+    cropRef,
+    lightRef,
+    colorRef,
+    detailRef,
+    exportRef
 }) => {
   const { t } = useTranslation();
   const [showWatermark, setShowWatermark] = useState(false);
@@ -86,7 +96,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
       </div>
 
       {/* Crop Section */}
-      <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+      <div ref={cropRef} className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
           <div className="flex items-center gap-2">
               <AutoCropIcon className="w-4 h-4 text-cyan-400" />
               <label className="text-sm font-medium text-slate-300">{t.tool_crop_title}</label>
@@ -119,15 +129,23 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           </div>
       </div>
 
-      <Slider label={t.manual_brightness} value={edits.brightness} onChange={(v) => handleChange('brightness', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_contrast} value={edits.contrast} onChange={(v) => handleChange('contrast', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_saturation} value={edits.saturation} onChange={(v) => handleChange('saturation', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_vibrance} value={edits.vibrance} onChange={(v) => handleChange('vibrance', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_shadows} value={edits.shadows} onChange={(v) => handleChange('shadows', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_highlights} value={edits.highlights} onChange={(v) => handleChange('highlights', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_clarity} value={edits.clarity} min={0} onChange={(v) => handleChange('clarity', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_sharpness} value={edits.sharpness} min={0} onChange={(v) => handleChange('sharpness', v)} onAfterChange={onSnapshot} />
-      <Slider label={t.manual_noise} value={edits.noiseReduction} min={0} onChange={(v) => handleChange('noiseReduction', v)} onAfterChange={onSnapshot} />
+      <div ref={lightRef} className="space-y-4">
+        <Slider label={t.manual_brightness} value={edits.brightness} onChange={(v) => handleChange('brightness', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_contrast} value={edits.contrast} onChange={(v) => handleChange('contrast', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_shadows} value={edits.shadows} onChange={(v) => handleChange('shadows', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_highlights} value={edits.highlights} onChange={(v) => handleChange('highlights', v)} onAfterChange={onSnapshot} />
+      </div>
+
+      <div ref={colorRef} className="space-y-4">
+        <Slider label={t.manual_saturation} value={edits.saturation} onChange={(v) => handleChange('saturation', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_vibrance} value={edits.vibrance} onChange={(v) => handleChange('vibrance', v)} onAfterChange={onSnapshot} />
+      </div>
+
+      <div ref={detailRef} className="space-y-4">
+        <Slider label={t.manual_clarity} value={edits.clarity} min={0} onChange={(v) => handleChange('clarity', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_sharpness} value={edits.sharpness} min={0} onChange={(v) => handleChange('sharpness', v)} onAfterChange={onSnapshot} />
+        <Slider label={t.manual_noise} value={edits.noiseReduction} min={0} onChange={(v) => handleChange('noiseReduction', v)} onAfterChange={onSnapshot} />
+      </div>
 
       {/* Watermark Section */}
       <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
@@ -185,8 +203,31 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
       <hr className="border-slate-700/50 my-4" />
 
       {/* Export Settings inside Manual Edits */}
-      <div className="space-y-4">
+      <div ref={exportRef} className="space-y-4">
           <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider">{t.manual_export_settings}</h4>
+          <div className="space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Smart Presets</div>
+              <div className="grid grid-cols-3 gap-2">
+                  <button
+                      onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 80, scale: 1 })}
+                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                      Social
+                  </button>
+                  <button
+                      onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 75, scale: 0.8 })}
+                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                      Web
+                  </button>
+                  <button
+                      onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 95, scale: 1 })}
+                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                      Print
+                  </button>
+              </div>
+          </div>
           
           {/* Format Selector */}
           <div className="grid grid-cols-2 gap-2">

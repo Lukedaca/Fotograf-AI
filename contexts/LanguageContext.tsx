@@ -26,6 +26,7 @@ const translations = {
     nav_projects: "Projekty",
     nav_clients: "Klienti",
     nav_ai_gallery: "AI Galerie",
+    nav_ai_command: "AI Command Center",
     
     pipeline_workflow: "Workflow",
     pipeline_creative: "Kreativa",
@@ -308,6 +309,7 @@ const translations = {
     nav_projects: "Projects",
     nav_clients: "Clients",
     nav_ai_gallery: "AI Gallery",
+    nav_ai_command: "AI Command Center",
 
     pipeline_workflow: "Workflow",
     pipeline_creative: "Creative",

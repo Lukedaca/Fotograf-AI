@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import type { UploadedFile } from '../types';
-import { autopilotImage, assessQuality } from '../services/geminiService';
+import type { UploadedFile, EnhancementMode } from '../types';
+import { analyzeImage, autopilotImage, assessQuality } from '../services/geminiService';
 import { AutopilotIcon, SparklesIcon, ChevronDoubleLeftIcon } from './icons';
 import Header from './Header';
 import { useTranslation } from '../contexts/LanguageContext';
+import { runAutopilot } from '../services/aiAutopilot';
 
 interface BatchViewProps {
   files: UploadedFile[];
@@ -18,7 +19,7 @@ interface BatchViewProps {
 }
 
 const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFiles, addNotification, title, onToggleSidebar, onOpenApiKeyModal, mode = 'batch' }) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set(files.map(f => f.id)));
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -48,6 +49,54 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
         const { file: newFile } = await autopilotImage(file.file);
         updatedFiles.push({ id: file.id, file: newFile });
       } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+          onOpenApiKeyModal();
+        }
+        addNotification(`${t.batch_error} ${file.file.name}`, 'error');
+      } finally {
+        setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      }
+    }
+    setIsProcessing(false);
+    if (updatedFiles.length > 0) {
+      onBatchComplete(updatedFiles);
+      addNotification(t.batch_complete, 'info');
+    }
+  };
+
+  const categorizeText = (text: string): EnhancementMode => {
+    const normalized = text.toLowerCase();
+    if (normalized.includes('portrait') || normalized.includes('person') || normalized.includes('face')) return 'portrait';
+    if (normalized.includes('landscape') || normalized.includes('mountain') || normalized.includes('sky') || normalized.includes('nature')) return 'landscape';
+    if (normalized.includes('food') || normalized.includes('meal') || normalized.includes('dish')) return 'food';
+    if (normalized.includes('product') || normalized.includes('object') || normalized.includes('studio')) return 'product';
+    if (normalized.includes('real estate') || normalized.includes('interior') || normalized.includes('architecture')) return 'real-estate';
+    return 'auto';
+  };
+
+  const handleSmartBatch = async () => {
+    if (selectedFiles.length === 0) {
+      addNotification(t.raw_no_files, 'error');
+      return;
+    }
+    setIsProcessing(true);
+    setProgress({ current: 0, total: selectedFiles.length });
+    const updatedFiles: { id: string; file: File }[] = [];
+    for (const file of selectedFiles) {
+      try {
+        const analysis = await analyzeImage(file.file, language);
+        const mode = categorizeText(`${analysis.description} ${analysis.suggestions?.join(' ') || ''}`);
+        const result = await runAutopilot(file.file, mode);
+        if (result.enhancedFile) {
+          updatedFiles.push({ id: file.id, file: result.enhancedFile });
+          onSetFiles(prev => prev.map(f => f.id === file.id ? { ...f, category: mode } : f), 'Smart Batch Categorization');
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+          onOpenApiKeyModal();
+        }
         addNotification(`${t.batch_error} ${file.file.name}`, 'error');
       } finally {
         setProgress(prev => ({ ...prev, current: prev.current + 1 }));
@@ -128,6 +177,9 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
                     <button onClick={handleBatchAutopilot} disabled={isProcessing || selectedFiles.length === 0} className="w-full py-4 bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:scale-105 transition-all text-xs font-black uppercase tracking-widest rounded-xl shadow-lg text-white">
                         {t.turbo_express_btn} ({selectedFiles.length})
                     </button>
+                    <button onClick={handleSmartBatch} disabled={isProcessing || selectedFiles.length === 0} className="w-full mt-3 py-3 bg-slate-800 hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/5 text-slate-300">
+                        Smart Batch (Auto Categorize)
+                    </button>
                 </div>
               </div>
 
@@ -149,6 +201,11 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
                                     <div className="absolute top-2 left-2 flex flex-col gap-1">
                                         {file.assessment.isBestPick && <div className="bg-cyan-500 text-[8px] font-black text-white px-2 py-0.5 rounded-full shadow-lg">TOP</div>}
                                         {file.assessment.score < 40 && <div className="bg-red-500 text-[8px] font-black text-white px-2 py-0.5 rounded-full shadow-lg">LOW</div>}
+                                    </div>
+                                )}
+                                {file.category && (
+                                    <div className="absolute bottom-2 left-2 text-[8px] font-black uppercase tracking-widest text-white bg-black/60 px-2 py-0.5 rounded-full">
+                                        {file.category}
                                     </div>
                                 )}
                                 {selectedFileIds.has(file.id) && (

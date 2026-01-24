@@ -1,19 +1,16 @@
 
-const API_KEY_STORAGE = 'fotograf_user_api_key_v1';
+import { apiKeyManager } from '../services/apiKeyManager';
 
 export const clearLegacyKeys = () => {
-    localStorage.removeItem('gemini_api_key');
-    localStorage.removeItem('artifex_user_api_key');
+    apiKeyManager.clearLegacyKeys();
 };
 
 export const setApiKey = (key: string) => {
-    localStorage.setItem(API_KEY_STORAGE, key.trim());
+    apiKeyManager.save(key);
 };
 
 export const getApiKey = (): string | null => {
-    const stored = localStorage.getItem(API_KEY_STORAGE);
-    if (!stored) return null;
-    return stored.trim() || null;
+    return apiKeyManager.get();
 };
 
 export const hasApiKey = (): boolean => {
@@ -21,5 +18,17 @@ export const hasApiKey = (): boolean => {
 };
 
 export const clearApiKey = () => {
-    localStorage.removeItem(API_KEY_STORAGE);
+    apiKeyManager.clear();
+};
+
+export const setSessionOnly = (enabled: boolean) => {
+    apiKeyManager.setSessionOnly(enabled);
+};
+
+export const isSessionOnly = (): boolean => {
+    return apiKeyManager.isSessionOnly();
+};
+
+export const enableSessionOnlyAutoClear = () => {
+    apiKeyManager.enableSessionOnlyAutoClear();
 };

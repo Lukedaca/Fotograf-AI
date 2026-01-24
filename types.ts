@@ -11,6 +11,7 @@ export interface UploadedFile {
   socialContent?: SocialMediaContent;
   generatedVideo?: GeneratedVideo;
   assessment?: QualityAssessment;
+  category?: string;
 }
 
 export interface QualityAssessment {
@@ -79,6 +80,56 @@ export interface CropCoordinates {
   height: number;
 }
 
+export type AutoCropComposition = 'centered' | 'rule-of-thirds' | 'golden-ratio';
+
+export interface AutoCropSuggestion {
+  aspectRatio: '1:1' | '4:3' | '3:2' | '16:9';
+  rect: CropCoordinates;
+  confidence: number;
+}
+
+export interface AutoCropResult {
+  mainSubject: CropCoordinates;
+  facesBoundingBox?: CropCoordinates | null;
+  suggestedCrops: AutoCropSuggestion[];
+  safeZone: CropCoordinates;
+  composition: AutoCropComposition;
+}
+
+export type EnhancementMode =
+  | 'auto'
+  | 'portrait'
+  | 'landscape'
+  | 'product'
+  | 'food'
+  | 'real-estate'
+  | 'social-media'
+  | 'print'
+  | 'cinematic'
+  | 'your-style';
+
+export interface GeneratedPreset {
+  id: string;
+  name: string;
+  edits: Omit<ManualEdits, 'cropRect'>;
+}
+
+export interface AIAutopilotAnalysis {
+  exposure: { value: number; suggestion: string };
+  colors: { temperature: number; saturation: number; suggestion: string };
+  composition: { score: number; suggestion: string };
+  sharpness: { value: number; suggestion: string };
+}
+
+export interface AIAutopilotResult {
+  enhancedImageBase64: string;
+  enhancedFile?: File;
+  appliedEdits: ManualEdits;
+  analysis: AIAutopilotAnalysis;
+  stylePresets: GeneratedPreset[];
+  nextSuggestions: string[];
+}
+
 export type EditorAction = {
   action: string;
   timestamp: number;
@@ -90,6 +141,7 @@ export type View =
   | 'upload'
   | 'editor'
   | 'batch'
+  | 'ai-command'
   | 'generate'
   | 'raw-converter'
   | 'ai-gallery'

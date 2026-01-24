@@ -7,6 +7,7 @@ const DashboardView = lazy(() => import('./components/DashboardView'));
 const UploadView = lazy(() => import('./components/UploadView'));
 const EditorView = lazy(() => import('./components/EditorView'));
 const BatchView = lazy(() => import('./components/BatchView'));
+const AICommandCenter = lazy(() => import('./components/ai/AICommandCenter'));
 const GenerateImageView = lazy(() => import('./components/GenerateImageView'));
 const RAWConverterView = lazy(() => import('./components/RAWConverterView'));
 const ProjectsView = lazy(() => import('./components/ProjectsView'));
@@ -29,7 +30,7 @@ import { XCircleIcon } from './components/icons';
 import type { UploadedFile, View, EditorAction, History, HistoryEntry, Preset, JobTemplate, WorkflowStep } from './types';
 
 // Utils & Services
-import { clearLegacyKeys } from './utils/apiKey';
+import { clearLegacyKeys, enableSessionOnlyAutoClear } from './utils/apiKey';
 import { normalizeImageFile } from './utils/imageProcessor';
 import { getPresets, getUserProfile, updateCredits, markOnboardingSeen } from './services/userProfileService';
 import { useTranslation } from './contexts/LanguageContext';
@@ -116,6 +117,7 @@ function App() {
 
   useEffect(() => {
     clearLegacyKeys();
+    enableSessionOnlyAutoClear();
   }, []);
 
   useEffect(() => {
@@ -409,6 +411,7 @@ function App() {
       if (view === 'editor') return t.nav_studio;
       if (view === 'batch') return t.nav_batch;
       if (view === 'generate') return t.gen_title;
+      if (view === 'ai-command') return t.nav_ai_command;
       if (view === 'raw-converter') return t.raw_title;
       if (view === 'ai-gallery') return t.nav_ai_gallery;
       if (view === 'projects' || view === 'project-detail') return t.nav_projects;
@@ -459,6 +462,20 @@ function App() {
           <div className="flex-1 flex flex-col h-full">
             <BatchView {...headerProps} files={files} onBatchComplete={handleBatchComplete} addNotification={addNotification} onSetFiles={setFiles} mode={activeAction?.action === 'culling' ? 'culling' : 'batch'} />
             {stepper}
+          </div>
+        );
+      case 'ai-command':
+        return (
+          <div className="flex-1 flex flex-col h-full">
+            <AICommandCenter
+              {...headerProps}
+              files={files}
+              activeFileId={activeFileId}
+              onSetFiles={setFiles}
+              onSetActiveFileId={setActiveFileId}
+              onDeductCredits={handleDeductCredits}
+              addNotification={addNotification}
+            />
           </div>
         );
       case 'generate':

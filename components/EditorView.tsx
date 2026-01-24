@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from './Header';
+import FloatingDock from './editor/FloatingDock';
+import RadialMenu from './editor/RadialMenu';
+import CinematicLoader from './common/CinematicLoader';
 import ManualEditControls from './ManualEditControls';
 import Histogram from './Histogram';
 import CompareSlider from './CompareSlider';
@@ -14,13 +18,15 @@ import {
     HistoryIcon,
     ExportIcon,
     EraserIcon,
-    AutoCropIcon
+    AutoCropIcon,
+    BackgroundReplacementIcon
 } from './icons';
-import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType } from '../types';
+import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType, AutoCropSuggestion, QualityAssessment } from '../types';
 import * as geminiService from '../services/geminiService';
 import { applyEditsAndExport } from '../utils/imageProcessor';
 import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
 import { useTranslation } from '../contexts/LanguageContext';
+import { updateUserTendencies } from '../services/userProfileService';
 
 interface EditorViewProps {
   files: UploadedFile[];
@@ -58,8 +64,8 @@ const INITIAL_EDITS: ManualEdits = {
 };
 
 const EditorView: React.FC<EditorViewProps> = (props) => {
-  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate, onOpenApiKeyModal, currentProjectId } = props;
-  const { t: trans } = useTranslation();
+  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, credits, onDeductCredits, history, onUndo, onRedo, onNavigate, onOpenApiKeyModal, currentProjectId } = props;
+  const { t: trans, language } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -68,6 +74,21 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [exportOptions, setExportOptions] = useState({ format: 'jpeg', quality: 90, scale: 1 });
   const [isComparing, setIsComparing] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [autoCropSuggestions, setAutoCropSuggestions] = useState<AutoCropSuggestion[]>([]);
+  const [autoCropSelectedIndex, setAutoCropSelectedIndex] = useState(0);
+  const [liveSuggestions, setLiveSuggestions] = useState<string[]>([]);
+  const [qualityAssessment, setQualityAssessment] = useState<QualityAssessment | null>(null);
+  const [showBgModal, setShowBgModal] = useState(false);
+  const [bgPrompt, setBgPrompt] = useState('');
+  const [autoCropImageSize, setAutoCropImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [radialMenu, setRadialMenu] = useState<{ x: number; y: number } | null>(null);
+  const lastAutoCropAtRef = useRef<number | null>(null);
+  const cropRef = useRef<HTMLDivElement>(null);
+  const lightRef = useRef<HTMLDivElement>(null);
+  const colorRef = useRef<HTMLDivElement>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const createdUrlsRef = useRef<string[]>([]);
   const createTrackedUrl = useCallback((blob: Blob) => {
@@ -88,6 +109,299 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
+
+
+  useEffect(() => {
+      return () => {
+          createdUrlsRef.current.forEach((url) => {
+              URL.revokeObjectURL(url);
+          });
+          createdUrlsRef.current = [];
+      };
+  }, []);
+
+  useEffect(() => {
+      return () => {
+          if (editedPreviewUrl && editedPreviewUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(editedPreviewUrl);
+          }
+      };
+  }, [editedPreviewUrl]);
+
+  useEffect(() => {
+    if (!activeFile) return;
+    setQualityAssessment(activeFile.assessment || null);
+
+    const currentFileId = activeFile.id;
+    const currentUrl = activeFile.originalPreviewUrl;
+    let isCancelled = false;
+
+    const apply = async () => {
+        try {
+            const blob = await applyEditsAndExport(
+                currentUrl,
+                manualEdits,
+                { format: 'jpeg', quality: 90, scale: 0.5 }
+            );
+            if (isCancelled) return;
+            const stillExists = files.find(f => f.id === currentFileId);
+            if (!stillExists) return;
+            const url = createTrackedUrl(blob);
+            setEditedPreviewUrl(url);
+        } catch (e) {
+            if (!isCancelled) {
+                console.error('Preview generation failed:', e);
+            }
+        }
+    };
+
+    const t = setTimeout(apply, 150);
+    return () => {
+        isCancelled = true;
+        clearTimeout(t);
+    };
+  }, [activeFile?.id, activeFile?.originalPreviewUrl, manualEdits, files, createTrackedUrl]);
+
+  const handleBackgroundRemoval = async () => {
+    if (!activeFile) return;
+    const COST = 4;
+    if (!await onDeductCredits(COST)) return;
+
+    setIsLoading(true);
+    setLoadingMessage("OdstraĹuji pozadĂ­...");
+    try {
+        const { file: newFile } = await geminiService.removeBackground(activeFile.file);
+        const url = createTrackedUrl(newFile);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Background Removal');
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleBackgroundReplace = async () => {
+    if (!activeFile) return;
+    if (!bgPrompt.trim()) return;
+    const COST = 5;
+    if (!await onDeductCredits(COST)) return;
+    setIsLoading(true);
+    setLoadingMessage("Nahrazuji pozadĂ­...");
+    try {
+        const { file: newFile } = await geminiService.replaceBackground(activeFile.file, bgPrompt.trim());
+        const url = createTrackedUrl(newFile);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Background Replacement');
+        setBgPrompt('');
+        setShowBgModal(false);
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleFaceEnhance = async () => {
+    if (!activeFile) return;
+    const COST = 3;
+    if (!await onDeductCredits(COST)) return;
+    setIsLoading(true);
+    setLoadingMessage("VylepĹˇuji obliÄŤeje...");
+    try {
+        const { file: newFile } = await geminiService.enhanceFaces(activeFile.file);
+        const url = createTrackedUrl(newFile);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Face Enhancement');
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleScorePhoto = async () => {
+    if (!activeFile) return;
+    const COST = 2;
+    if (!await onDeductCredits(COST)) return;
+    setIsLoading(true);
+    setLoadingMessage("HodnotĂ­m kvalitu...");
+    try {
+        const result = await geminiService.assessQuality(activeFile.file);
+        setQualityAssessment(result);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, assessment: result } : f), 'Photo Scoring');
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleAutopilot = async () => {
+    if (!activeFile) return;
+    const COST = 3;
+    if (!await onDeductCredits(COST)) return;
+
+    setIsLoading(true);
+    setLoadingMessage("AI analyzuje a vylepšuje váš snímek...");
+    try {
+        const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
+        const url = createTrackedUrl(newFile);
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
+        try {
+            const { width, height } = await getImageDimensionsFromBlob(newFile);
+            await saveAIGalleryAsset({
+                id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                createdAt: new Date().toISOString(),
+                type: 'autopilot' as AIGalleryType,
+                prompt: 'Autopilot',
+                sourceFileId: activeFile.id,
+                projectId: currentProjectId || null,
+                fileName: newFile.name,
+                mimeType: newFile.type,
+                size: newFile.size,
+                width,
+                height,
+                blob: newFile,
+            });
+        } catch (e) {
+            console.error('Failed to save AI gallery item', e);
+        }
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    }
+    finally { setIsLoading(false); }
+  };
+
+  const handleAutoCrop = useCallback(async () => {
+    if (!activeFile) return;
+    const COST = 2;
+    if (!await onDeductCredits(COST)) return;
+
+    setIsLoading(true);
+    setLoadingMessage("AI hledĂˇ nejlepĹˇĂ­ oĹ™ez...");
+    try {
+        const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
+        const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
+        const best = result.suggestedCrops[0];
+        if (!best?.rect) {
+            throw new Error('Auto-crop analysis returned no suggestions');
+        }
+        setAutoCropSuggestions(result.suggestedCrops);
+        setAutoCropSelectedIndex(0);
+        setAutoCropImageSize({ width, height });
+        setManualEdits(prev => ({
+            ...prev,
+            cropRect: best.rect,
+            aspectRatio: undefined
+        }));
+        addNotification('Auto-crop pĹ™ipraven (1-3)', 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  }, [activeFile, addNotification, onDeductCredits, onOpenApiKeyModal, trans.msg_error]);
+
+  const handleManualExport = async () => {
+    if (!activeFile) return;
+    setIsLoading(true);
+    try {
+        const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
+        const url = createTrackedUrl(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `edited_${activeFile.file.name.replace(/.[^/.]+$/, "")}.${exportOptions.format === 'jpeg' ? 'jpg' : 'png'}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        revokeTrackedUrl(url);
+        addNotification(trans.msg_success, 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    }
+    finally { setIsLoading(false); }
+  };
+
+  const handleSnapshot = () => {
+    updateUserTendencies({
+      brightness: manualEdits.brightness,
+      contrast: manualEdits.contrast,
+      saturation: manualEdits.saturation,
+      vibrance: manualEdits.vibrance,
+      shadows: manualEdits.shadows,
+      highlights: manualEdits.highlights,
+      clarity: manualEdits.clarity,
+      sharpness: manualEdits.sharpness,
+      noiseReduction: manualEdits.noiseReduction,
+    });
+  };
+
+  useEffect(() => {
+    if (activeAction?.action !== 'auto-crop') return;
+    if (activeAction.timestamp === lastAutoCropAtRef.current) return;
+    lastAutoCropAtRef.current = activeAction.timestamp;
+    handleAutoCrop();
+  }, [activeAction?.action, activeAction?.timestamp, handleAutoCrop]);
+
+  const handleSmartSelect = async () => {
+    if (!activeFile) return;
+    const COST = 2;
+    if (!await onDeductCredits(COST)) return;
+    setIsLoading(true);
+    setLoadingMessage("VybĂ­rĂˇm hlavnĂ­ objekt...");
+    try {
+        const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
+        const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
+        if (!result.mainSubject) {
+            throw new Error('No subject found');
+        }
+        setManualEdits(prev => ({
+            ...prev,
+            cropRect: result.mainSubject,
+            aspectRatio: undefined
+        }));
+        addNotification('Objekt vybrĂˇn', 'info');
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   // Voice Recognition
   useEffect(() => {
@@ -115,12 +429,38 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
           const command = result[0].transcript.toLowerCase().trim();
           if (!command) return;
 
+          if (command.includes('hey foto') || command.includes('hej foto') || command.includes('hey photo')) {
+              addNotification('Hey Foto ready', 'info');
+          }
+
           if (command.includes('jas') || command.includes('brightness')) {
-              if (command.includes('víc') || command.includes('up')) {
+              if (command.includes('vĂ­c') || command.includes('up')) {
                   setManualEdits(prev => ({...prev, brightness: Math.min(100, prev.brightness + 10)}));
-              } else if (command.includes('méně') || command.includes('down')) {
+              } else if (command.includes('mĂ©nÄ›') || command.includes('down')) {
                    setManualEdits(prev => ({...prev, brightness: Math.max(-100, prev.brightness - 10)}));
               }
+          } else if (command.includes('auto crop') || command.includes('oĹ™ez') || command.includes('crop')) {
+              handleAutoCrop();
+          } else if (command.includes('remove background') || command.includes('remove bg') || command.includes('odstraĹ pozad')) {
+              handleBackgroundRemoval();
+          } else if (command.includes('replace background') || command.includes('vymÄ›nit pozad')) {
+              setShowBgModal(true);
+          } else if (command.includes('face') || command.includes('obliÄŤej')) {
+              handleFaceEnhance();
+          } else if (command.includes('score') || command.includes('hodno')) {
+              handleScorePhoto();
+          } else if (command.includes('compare') || command.includes('porov')) {
+              setIsComparing(prev => !prev);
+          } else if (command.includes('export') || command.includes('stĂˇhn')) {
+              handleManualExport();
+          } else if (command.includes('focus')) {
+              setIsFocusMode(true);
+          } else if (command.includes('exit focus') || command.includes('zruĹˇ focus') || command.includes('zpÄ›t')) {
+              setIsFocusMode(false);
+          } else if (command.includes('undo last 3') || command.includes('vrĂˇĹĄ poslednĂ­ 3')) {
+              onUndo(); onUndo(); onUndo();
+          } else if (command.includes('undo') || command.includes('zpÄ›t')) {
+              onUndo();
           } else if (command.includes('reset')) {
               setManualEdits(INITIAL_EDITS);
           }
@@ -165,122 +505,60 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
               // already stopped
           }
       };
-  }, [isVoiceActive, language, addNotification]);
+  }, [isVoiceActive, language, addNotification, handleAutoCrop, handleBackgroundRemoval, handleFaceEnhance, handleManualExport, handleScorePhoto, onUndo]);
 
   useEffect(() => {
-      return () => {
-          createdUrlsRef.current.forEach((url) => {
-              URL.revokeObjectURL(url);
-          });
-          createdUrlsRef.current = [];
-      };
+    const suggestions: string[] = [];
+    if (manualEdits.brightness > 25 && manualEdits.highlights < 10) {
+      suggestions.push('Zkuste snĂ­Ĺľit highlights pro zachovĂˇnĂ­ detailĹŻ.');
+    }
+    if (manualEdits.brightness < -20 && manualEdits.shadows < 10) {
+      suggestions.push('ZvednÄ›te stĂ­ny pro vĂ­ce detailĹŻ.');
+    }
+    if (manualEdits.saturation > 35 && manualEdits.vibrance < 10) {
+      suggestions.push('ZvyĹˇte vibrance pro pĹ™irozenÄ›jĹˇĂ­ sytost.');
+    }
+    if (manualEdits.sharpness > 60 && manualEdits.noiseReduction < 10) {
+      suggestions.push('PĹ™idejte lehkou redukci Ĺˇumu pro ÄŤistĹˇĂ­ obraz.');
+    }
+    if (manualEdits.contrast < -20) {
+      suggestions.push('ZvyĹˇte kontrast pro lepĹˇĂ­ dynamiku.');
+    }
+    if (manualEdits.cropRect && !manualEdits.aspectRatio) {
+      suggestions.push('RychlĂ˝ tip: zvaĹľte export do 4:3 nebo 3:2.');
+    }
+    setLiveSuggestions(suggestions.slice(0, 3));
+  }, [manualEdits]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFocusMode(false);
+        setRadialMenu(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   useEffect(() => {
-      return () => {
-          if (editedPreviewUrl && editedPreviewUrl.startsWith('blob:')) {
-              URL.revokeObjectURL(editedPreviewUrl);
-          }
-      };
-  }, [editedPreviewUrl]);
-
-  useEffect(() => {
-    if (!activeFile) return;
-
-    const currentFileId = activeFile.id;
-    const currentUrl = activeFile.originalPreviewUrl;
-    let isCancelled = false;
-
-    const apply = async () => {
-        try {
-            const blob = await applyEditsAndExport(
-                currentUrl,
-                manualEdits,
-                { format: 'jpeg', quality: 90, scale: 0.5 }
-            );
-            if (isCancelled) return;
-            const stillExists = files.find(f => f.id === currentFileId);
-            if (!stillExists) return;
-            const url = createTrackedUrl(blob);
-            setEditedPreviewUrl(url);
-        } catch (e) {
-            if (!isCancelled) {
-                console.error('Preview generation failed:', e);
-            }
+    if (autoCropSuggestions.length === 0) return;
+    const handleKey = (event: KeyboardEvent) => {
+        if (event.key === '1' || event.key === '2' || event.key === '3') {
+            const idx = Number(event.key) - 1;
+            const suggestion = autoCropSuggestions[idx];
+            if (!suggestion) return;
+            setAutoCropSelectedIndex(idx);
+            setManualEdits(prev => ({
+                ...prev,
+                cropRect: suggestion.rect,
+                aspectRatio: undefined
+            }));
         }
     };
-
-    const t = setTimeout(apply, 150);
-    return () => {
-        isCancelled = true;
-        clearTimeout(t);
-    };
-  }, [activeFile?.id, activeFile?.originalPreviewUrl, manualEdits, files, createTrackedUrl]);
-
-  const handleAutopilot = async () => {
-    if (!activeFile) return;
-    const COST = 3;
-    if (!await onDeductCredits(COST)) return;
-
-    setIsLoading(true);
-    setLoadingMessage("AI analyzuje a vylepšuje váš snímek...");
-    try {
-        const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
-        const url = createTrackedUrl(newFile);
-        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
-        try {
-            const { width, height } = await getImageDimensionsFromBlob(newFile);
-            await saveAIGalleryAsset({
-                id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                createdAt: new Date().toISOString(),
-                type: 'autopilot' as AIGalleryType,
-                prompt: 'Autopilot',
-                sourceFileId: activeFile.id,
-                projectId: currentProjectId || null,
-                fileName: newFile.name,
-                mimeType: newFile.type,
-                size: newFile.size,
-                width,
-                height,
-                blob: newFile,
-            });
-        } catch (e) {
-            console.error('Failed to save AI gallery item', e);
-        }
-        addNotification(trans.msg_success, 'info');
-    } catch (e) {
-        const message = e instanceof Error ? e.message : '';
-        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
-            onOpenApiKeyModal();
-        }
-        addNotification(trans.msg_error, 'error');
-    }
-    finally { setIsLoading(false); }
-  };
-
-  const handleManualExport = async () => {
-    if (!activeFile) return;
-    setIsLoading(true);
-    try {
-        const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
-        const url = createTrackedUrl(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `edited_${activeFile.file.name.replace(/\.[^/.]+$/, "")}.${exportOptions.format === 'jpeg' ? 'jpg' : 'png'}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        revokeTrackedUrl(url);
-        addNotification(trans.msg_success, 'info');
-    } catch (e) {
-        const message = e instanceof Error ? e.message : '';
-        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
-            onOpenApiKeyModal();
-        }
-        addNotification(trans.msg_error, 'error');
-    }
-    finally { setIsLoading(false); }
-  };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [autoCropSuggestions]);
 
   const handleGenerateThumbnail = async () => {
     if (!thumbnailTopic.trim()) { addNotification(trans.tool_youtube_topic_ph, 'error'); return; }
@@ -300,7 +578,8 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                 id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
                 createdAt: new Date().toISOString(),
                 type: 'youtube-thumbnail' as AIGalleryType,
-                prompt: `Topic: ${thumbnailTopic}\nText: ${thumbnailText}`,
+                prompt: `Topic: ${thumbnailTopic}
+Text: ${thumbnailText}`,
                 projectId: currentProjectId || null,
                 fileName: file.name,
                 mimeType: file.type,
@@ -332,11 +611,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
-        <Header title={isYouTubeMode ? "YouTube Thumbnail Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} onBuyCredits={props.onBuyCredits} />
+    <div className="flex-1 flex flex-col h-full bg-void overflow-hidden">
+        {!isFocusMode && (
+          <Header title={isYouTubeMode ? "YouTube Thumbnail Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} onBuyCredits={props.onBuyCredits} />
+        )}
         
         {/* Quick Start Ribbon */}
-        {!isYouTubeMode && activeFile && (
+        {!isFocusMode && !isYouTubeMode && activeFile && (
           <div className="bg-slate-900/40 border-b border-white/5 py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 mr-2">Quick Actions:</span>
             <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-full border border-cyan-500/20 transition-all text-[11px] font-bold">
@@ -351,6 +632,26 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
               <AutoCropIcon className="w-3.5 h-3.5" />
               Auto Crop
             </button>
+            <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/20 transition-all text-[11px] font-bold">
+              <BackgroundReplacementIcon className="w-3.5 h-3.5" />
+              Remove BG
+            </button>
+            <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 rounded-full border border-teal-500/20 transition-all text-[11px] font-bold">
+              <BackgroundReplacementIcon className="w-3.5 h-3.5" />
+              Replace BG
+            </button>
+            <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 rounded-full border border-slate-500/20 transition-all text-[11px] font-bold">
+              <SparklesIcon className="w-3.5 h-3.5" />
+              Select Subject
+            </button>
+            <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 rounded-full border border-pink-500/20 transition-all text-[11px] font-bold">
+              <SparklesIcon className="w-3.5 h-3.5" />
+              Face Enhance
+            </button>
+            <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/20 transition-all text-[11px] font-bold">
+              <SparklesIcon className="w-3.5 h-3.5" />
+              Score
+            </button>
             <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full border border-white/5 transition-all text-[11px] font-bold">
               <ExportIcon className="w-3.5 h-3.5" />
               Quick Export
@@ -360,30 +661,67 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             {/* Viewport */}
-            <div className="flex-1 bg-slate-900/40 relative overflow-hidden flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-full relative flex items-center justify-center">
+            <div
+              className="flex-1 bg-surface/60 relative overflow-hidden flex items-center justify-center p-6"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (isYouTubeMode || !activeFile) return;
+                setRadialMenu({ x: e.clientX, y: e.clientY });
+              }}
+            >
+                <div className="w-full max-w-5xl h-full relative flex items-center justify-center">
                     
                     {!isYouTubeMode && activeFile && (
-                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${isVoiceActive ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
+                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${isVoiceActive ? 'bg-red-500 animate-pulse text-white' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     )}
 
                     {activeFile ? (
-                        <div className="relative group shadow-2xl rounded-xl overflow-hidden border border-white/10 max-h-full max-w-full">
+                        <div
+                          className="relative group shadow-2xl rounded-2xl overflow-hidden border border-border-subtle max-h-full max-w-full"
+                          onDoubleClick={() => setIsFocusMode((prev) => !prev)}
+                        >
                            {isComparing ? (
                                <CompareSlider beforeUrl={activeFile.originalPreviewUrl} afterUrl={editedPreviewUrl || activeFile.previewUrl} />
                            ) : (
                                <>
-                                <img src={editedPreviewUrl || activeFile.previewUrl} alt="Preview" className="max-h-full max-w-full object-contain select-none" />
-                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-slate-900/80 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/10 hover:bg-black transition-colors z-20">
+                                <div className="relative inline-block">
+                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt="Preview" className="block max-h-full max-w-full object-contain select-none" />
+                                  {autoCropSuggestions.length > 0 && autoCropImageSize && (
+                                    <div className="absolute inset-0 pointer-events-none">
+                                      {autoCropSuggestions.slice(0, 3).map((item, idx) => {
+                                        const left = (item.rect.x / autoCropImageSize.width) * 100;
+                                        const top = (item.rect.y / autoCropImageSize.height) * 100;
+                                        const width = (item.rect.width / autoCropImageSize.width) * 100;
+                                        const height = (item.rect.height / autoCropImageSize.height) * 100;
+                                        const isActive = idx === autoCropSelectedIndex;
+                                        return (
+                                          <motion.div
+                                            key={`${item.aspectRatio}-${idx}`}
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: isActive ? 0.9 : 0.45, scale: 1 }}
+                                            transition={{ duration: 0.2 }}
+                                            className={`absolute border-2 rounded-xl ${isActive ? 'border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.4)]' : 'border-white/30'}`}
+                                            style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
+                                          >
+                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded">
+                                              {idx + 1}
+                                            </div>
+                                          </motion.div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface/90 text-text-primary px-4 py-2 rounded-full text-xs font-bold border border-border-subtle hover:bg-elevated transition-colors z-20">
                                     {trans.compare_btn}
                                 </button>
                                </>
                            )}
                         </div>
                     ) : isYouTubeMode ? (
-                        <div className="w-full h-full border-2 border-dashed border-red-500/20 rounded-3xl flex flex-col items-center justify-center bg-slate-900/50 backdrop-blur-sm group">
+                        <div className="w-full h-full border-2 border-dashed border-accent-warning/20 rounded-3xl flex flex-col items-center justify-center bg-surface/60 backdrop-blur-sm group">
                             <div className="p-8 bg-red-500/5 rounded-full mb-6 group-hover:bg-red-500/10 transition-all duration-500">
                                 <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
                             </div>
@@ -391,17 +729,66 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                         </div>
                     ) : null}
                 </div>
+
+                {!isYouTubeMode && autoCropSuggestions.length > 0 && (
+                    <div className="absolute bottom-4 left-4 z-40 bg-slate-900/90 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur">
+                        <div className="flex items-center justify-between gap-4 mb-3">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-amber-400">AI Crop</div>
+                            <button
+                                onClick={() => {
+                                    setAutoCropSuggestions([]);
+                                    setAutoCropImageSize(null);
+                                    setManualEdits(prev => ({ ...prev, cropRect: undefined }));
+                                }}
+                                className="text-[10px] text-slate-400 hover:text-white"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                        <div className="flex gap-2">
+                            {autoCropSuggestions.slice(0, 3).map((item, index) => (
+                                <button
+                                    key={`${item.aspectRatio}-${index}`}
+                                    onClick={() => {
+                                        setAutoCropSelectedIndex(index);
+                                        setManualEdits(prev => ({
+                                            ...prev,
+                                            cropRect: item.rect,
+                                            aspectRatio: undefined
+                                        }));
+                                    }}
+                                    className={`px-3 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                        autoCropSelectedIndex === index
+                                            ? 'bg-amber-500/20 border-amber-500 text-amber-200'
+                                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+                                    }`}
+                                >
+                                    {index + 1}. {item.aspectRatio}
+                                    <span className="ml-2 text-[10px] text-slate-500">{Math.round((item.confidence || 0) * 100)}%</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mt-2 text-[10px] text-slate-500">Hotkeys: 1, 2, 3</div>
+                    </div>
+                )}
                 
                 {isLoading && (
-                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 border-4 border-slate-800 border-t-cyan-500 rounded-full animate-spin mb-6"></div>
-                        <p className="text-xl font-black text-white tracking-tight animate-pulse">{loadingMessage}</p>
+                    <div className="absolute inset-0 bg-void/80 backdrop-blur-md z-50 flex flex-col items-center justify-center">
+                        <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
                 )}
             </div>
 
             {/* Controls Sidebar */}
-            <div className="w-full lg:w-96 bg-slate-900/90 backdrop-blur-3xl border-l border-white/5 flex flex-col z-20 overflow-y-auto custom-scrollbar">
+            <AnimatePresence>
+            {!isFocusMode && (
+            <motion.div
+              initial={{ x: 40, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 40, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="w-full lg:w-[420px] bg-surface/90 backdrop-blur-3xl border-l border-border-subtle flex flex-col z-20 overflow-y-auto custom-scrollbar"
+            >
                 
                 {/* Job Log (Recent History) */}
                 <div className="px-8 pt-6">
@@ -432,6 +819,76 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                     </div>
                 )}
 
+                {!isYouTubeMode && activeFile && (
+                    <div className="px-8 mt-4">
+                        <div className="p-4 rounded-xl border border-white/5 bg-slate-900/70">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">AI Suggestions</div>
+                            {liveSuggestions.length === 0 ? (
+                                <div className="text-xs text-slate-500">VĹˇe vypadĂˇ dobĹ™e.</div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {liveSuggestions.map((item, idx) => (
+                                        <div key={`${item}-${idx}`} className="text-xs text-slate-400">
+                                            â€¢ {item}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {!isYouTubeMode && activeFile && (
+                    <div className="px-8 mt-4">
+                        <div className="p-4 rounded-xl border border-border-subtle bg-surface/80">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">AI Photo Score</div>
+                                <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">Run</button>
+                            </div>
+                            {qualityAssessment ? (
+                                <div className="space-y-2 text-xs text-text-secondary">
+                                    <div className="flex items-center justify-between">
+                                        <span>Score</span>
+                                        <span className="text-text-primary font-bold">{qualityAssessment.score}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>Best Pick</span>
+                                        <span className="text-text-primary font-bold">{qualityAssessment.isBestPick ? 'Yes' : 'No'}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(qualityAssessment.flags || []).slice(0, 6).map((flag) => (
+                                            <span key={flag} className="px-2 py-1 rounded-full border border-border-subtle bg-elevated text-[10px] text-text-secondary">
+                                                {flag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-text-secondary">ZatĂ­m bez hodnocenĂ­.</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {!isYouTubeMode && activeFile && history.past.length > 0 && (
+                    <div className="px-8 mt-4">
+                        <div className="p-4 rounded-xl border border-border-subtle bg-surface/80">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">Time Machine</div>
+                            <div className="space-y-2">
+                                {history.past.slice(-5).reverse().map((entry, idx) => (
+                                    <button
+                                        key={`${entry.actionName}-${idx}`}
+                                        onClick={() => onSetFiles(() => entry.state, `Time Machine: ${entry.actionName}`)}
+                                        className="w-full text-left text-xs text-text-secondary hover:text-text-primary px-3 py-2 rounded-lg border border-border-subtle bg-elevated/70 hover:bg-elevated transition-all"
+                                    >
+                                        {entry.actionName}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="p-8 space-y-8 pt-2">
                     {isYouTubeMode && (
                         <div className="space-y-6 animate-fade-in-right">
@@ -455,13 +912,106 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                     )}
 
                     {!isYouTubeMode && activeFile && (
-                         <ManualEditControls edits={manualEdits} onEditChange={(k, v) => setManualEdits(p => ({...p, [k]: v}))} onReset={() => setManualEdits(INITIAL_EDITS)} exportOptions={exportOptions} onExportOptionsChange={setExportOptions} onRequestExport={handleManualExport} onStartManualCrop={() => {}} onSnapshot={() => {}} />
+                         <ManualEditControls
+                           edits={manualEdits}
+                           onEditChange={(k, v) => setManualEdits(p => ({...p, [k]: v}))}
+                           onReset={() => setManualEdits(INITIAL_EDITS)}
+                           exportOptions={exportOptions}
+                           onExportOptionsChange={setExportOptions}
+                           onRequestExport={handleManualExport}
+                           onStartManualCrop={() => {}}
+                           onSnapshot={handleSnapshot}
+                           cropRef={cropRef}
+                           lightRef={lightRef}
+                           colorRef={colorRef}
+                           detailRef={detailRef}
+                           exportRef={exportRef}
+                         />
                     )}
                 </div>
-            </div>
+            </motion.div>
+            )}
+            </AnimatePresence>
         </div>
+
+        <AnimatePresence>
+          {!isFocusMode && !isYouTubeMode && activeFile && (
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+              <FloatingDock
+                items={[
+                  { id: 'crop', label: 'Crop', onClick: () => cropRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+                  { id: 'light', label: 'Light', onClick: () => lightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+                  { id: 'color', label: 'Color', onClick: () => colorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+                  { id: 'detail', label: 'Detail', onClick: () => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+                  { id: 'export', label: 'Export', onClick: () => exportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+                ]}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {isFocusMode && (
+          <div className="absolute top-4 right-6 z-40">
+            <button
+              onClick={() => setIsFocusMode(false)}
+              className="px-3 py-2 text-[11px] font-bold rounded-xl border border-border-subtle bg-surface/90 text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+            >
+              Exit Focus
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {radialMenu && (
+            <RadialMenu
+              x={radialMenu.x}
+              y={radialMenu.y}
+              onClose={() => setRadialMenu(null)}
+              items={[
+                { id: 'autopilot', label: 'Autopilot', onClick: handleAutopilot },
+                { id: 'auto-crop', label: 'Auto Crop', onClick: handleAutoCrop },
+                { id: 'select-subject', label: 'Select Subject', onClick: handleSmartSelect },
+                { id: 'remove-bg', label: 'Remove BG', onClick: handleBackgroundRemoval },
+                { id: 'replace-bg', label: 'Replace BG', onClick: () => setShowBgModal(true) },
+                { id: 'face', label: 'Face Enhance', onClick: handleFaceEnhance },
+                { id: 'score', label: 'Score Photo', onClick: handleScorePhoto },
+                { id: 'compare', label: isComparing ? 'Stop Compare' : 'Compare', onClick: () => setIsComparing((p) => !p) },
+                { id: 'export', label: 'Export', onClick: handleManualExport },
+              ]}
+            />
+          )}
+        </AnimatePresence>
+
+        {showBgModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-lg rounded-3xl border border-border-subtle bg-surface p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm font-black uppercase tracking-widest text-text-secondary">Replace Background</div>
+                <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">Close</button>
+              </div>
+              <textarea
+                rows={4}
+                value={bgPrompt}
+                onChange={(e) => setBgPrompt(e.target.value)}
+                placeholder="napĹ™. neonovĂˇ ulice v Tokiu, zlatĂˇ hodinka, studio backdrop"
+                className="w-full rounded-xl bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
+              />
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-[11px] text-text-secondary">Cena: 5 kreditĹŻ</span>
+                <button
+                  onClick={handleBackgroundReplace}
+                  className="px-4 py-2 rounded-xl text-[11px] font-bold bg-accent-secondary text-void"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 };
 
 export default EditorView;
+
+

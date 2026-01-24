@@ -1,17 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.cdnfonts.com/css/clash-display');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-deep: #020617;
-  --accent-cyan: #22d3ee;
-  --accent-fuchsia: #d946ef;
+  --bg-void: #0a0a0b;
+  --bg-surface: #111113;
+  --bg-elevated: #1a1a1d;
+  --accent-primary: #ff6b35;
+  --accent-secondary: #00d4aa;
+  --accent-warning: #ffd23f;
+  --text-primary: #fafafa;
+  --text-secondary: #888888;
+  --border-subtle: #2a2a2d;
 }
 
 body {
   margin: 0;
   font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--bg-deep);
+  background-color: var(--bg-void);
   color: white;
   overflow-x: hidden;
 }
@@ -24,7 +33,7 @@ body {
   width: 100%;
   height: 100%;
   z-index: -1;
-  background: var(--bg-deep);
+  background: var(--bg-void);
   overflow: hidden;
 }
 

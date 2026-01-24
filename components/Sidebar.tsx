@@ -88,6 +88,7 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
   ];
 
   const creativeTools = [
+    { icon: <SparklesIcon className="w-5 h-5 flex-shrink-0"/>, label: t.nav_ai_command, view: "ai-command" as View },
     { icon: <YoutubeIcon className="w-5 h-5 flex-shrink-0"/>, label: t.nav_youtube, view: "editor" as View, action: "youtube-thumbnail" },
     { icon: <SparklesIcon className="w-5 h-5 flex-shrink-0"/>, label: t.nav_social, view: "editor" as View, action: "social-media" },
     { icon: <FilmIcon className="w-5 h-5 flex-shrink-0"/>, label: t.nav_video, view: "editor" as View, action: "video-generation" },
