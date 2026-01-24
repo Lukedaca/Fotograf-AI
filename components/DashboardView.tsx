@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from './Header';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -14,125 +13,122 @@ interface DashboardViewProps {
   onOpenApiKeyModal?: () => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ 
-  onNavigate, onToggleSidebar, credits, recentHistory, onBuyCredits, onOpenApiKeyModal
+const DashboardView: React.FC<DashboardViewProps> = ({
+  onNavigate,
+  onToggleSidebar,
+  credits,
+  recentHistory,
+  onBuyCredits,
+  onOpenApiKeyModal,
 }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
-      <Header 
-        title={t.nav_studio} 
-        onToggleSidebar={onToggleSidebar} 
-        credits={credits} 
+    <div className="w-full h-full flex flex-col bg-void text-text-primary overflow-y-auto custom-scrollbar">
+      <Header
+        title={t.nav_studio}
+        onToggleSidebar={onToggleSidebar}
+        credits={credits}
         onBuyCredits={onBuyCredits}
         onOpenApiKeyModal={onOpenApiKeyModal}
       />
-      
-      <div className="p-6 lg:p-12 max-w-7xl mx-auto w-full space-y-12 animate-fade-in">
-        
-        {/* Hero Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div 
-            onClick={() => onNavigate({ view: 'upload' })}
-            className="group relative overflow-hidden bg-gradient-to-br from-cyan-600 to-indigo-700 p-8 rounded-[2rem] shadow-2xl cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]"
-          >
-            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:rotate-12 transition-transform">
-              <UploadIcon className="w-40 h-40" />
-            </div>
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              <div>
-                <h2 className="text-3xl font-black text-white mb-2">{t.dashboard_new_job}</h2>
-                <p className="text-cyan-100/70 text-sm max-w-xs">{t.home_subtitle}</p>
-              </div>
-              <div className="mt-8 flex items-center gap-2 text-white font-bold">
-                <span>Start Pipeline</span>
-                <ChevronDoubleLeftIcon className="w-4 h-4 rotate-180" />
-              </div>
-            </div>
-          </div>
 
-          <div 
-            onClick={() => onNavigate({ view: 'editor' })}
-            className="group relative overflow-hidden bg-slate-900 border border-white/5 p-8 rounded-[2rem] shadow-2xl cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]"
+      <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full space-y-10 animate-fade-in">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <button
+            onClick={() => onNavigate({ view: 'upload' })}
+            className="group w-full text-left border border-border-subtle bg-surface p-6 transition-none hover:border-accent"
           >
-            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform">
-              <LogoIcon className="w-40 h-40" />
-            </div>
-            <div className="relative z-10 flex flex-col h-full justify-between">
+            <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-3xl font-black text-white mb-2">{t.dashboard_continue}</h2>
-                <p className="text-slate-500 text-sm max-w-xs">Navažte tam, kde jste skončili.</p>
+                <div className="text-[10px] uppercase tracking-widest text-text-secondary">Pipeline</div>
+                <h2 className="heading text-2xl mt-2">{t.dashboard_new_job}</h2>
+                <p className="text-xs text-text-secondary mt-2 max-w-xs">Začni novou zakázku a postav pipeline od importu po export.</p>
               </div>
-              <div className="mt-8 flex items-center gap-2 text-slate-300 font-bold">
-                <span>Open Studio</span>
-                <ChevronDoubleLeftIcon className="w-4 h-4 rotate-180" />
-              </div>
+              <UploadIcon className="w-10 h-10 text-accent" />
             </div>
-          </div>
+            <div className="mt-6 flex items-center gap-2 text-[11px] uppercase tracking-widest text-text-secondary">
+              <span>Spustit workflow</span>
+              <ChevronDoubleLeftIcon className="w-4 h-4 rotate-180" />
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate({ view: 'editor' })}
+            className="group w-full text-left border border-border-subtle bg-surface p-6 transition-none hover:border-accent"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-text-secondary">Studio</div>
+                <h2 className="heading text-2xl mt-2">{t.dashboard_continue}</h2>
+                <p className="text-xs text-text-secondary mt-2 max-w-xs">Navážeš tam, kde jsi skončil.</p>
+              </div>
+              <LogoIcon className="w-10 h-10 text-white" />
+            </div>
+            <div className="mt-6 flex items-center gap-2 text-[11px] uppercase tracking-widest text-text-secondary">
+              <span>Otevřít studio</span>
+              <ChevronDoubleLeftIcon className="w-4 h-4 rotate-180" />
+            </div>
+          </button>
         </div>
 
-        {/* Bottom Grid: Quick Actions & History */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-6">Quick Actions</h3>
-            <button 
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-text-secondary">Rychlé akce</h3>
+            <button
               onClick={() => onNavigate({ view: 'batch', action: 'culling' })}
-              className="w-full flex items-center gap-4 p-5 bg-slate-900/50 border border-white/5 rounded-2xl hover:bg-slate-800 transition-colors group"
+              className="w-full flex items-center gap-4 p-4 border border-border-subtle bg-elevated hover:border-accent transition-none"
             >
-              <div className="p-3 bg-cyan-500/10 rounded-xl group-hover:scale-110 transition-transform">
-                <SparklesIcon className="w-6 h-6 text-cyan-400" />
+              <div className="p-2 border border-border-subtle">
+                <SparklesIcon className="w-5 h-5 text-accent" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-slate-200">{t.dashboard_quick_culling}</div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-widest">Pipeline Step 2</div>
+                <div className="font-bold text-text-primary">{t.dashboard_quick_culling}</div>
+                <div className="text-[10px] text-text-secondary uppercase tracking-widest">Krok 2</div>
               </div>
             </button>
 
-            <button 
+            <button
               onClick={() => onNavigate({ view: 'editor', action: 'autopilot' })}
-              className="w-full flex items-center gap-4 p-5 bg-slate-900/50 border border-white/5 rounded-2xl hover:bg-slate-800 transition-colors group"
+              className="w-full flex items-center gap-4 p-4 border border-border-subtle bg-elevated hover:border-accent transition-none"
             >
-              <div className="p-3 bg-fuchsia-500/10 rounded-xl group-hover:scale-110 transition-transform">
-                <AutopilotIcon className="w-6 h-6 text-fuchsia-400" />
+              <div className="p-2 border border-border-subtle">
+                <AutopilotIcon className="w-5 h-5 text-accent" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-slate-200">{t.dashboard_quick_autopilot}</div>
-                <div className="text-[10px] text-slate-500 uppercase tracking-widest">Pipeline Step 3</div>
+                <div className="font-bold text-text-primary">{t.dashboard_quick_autopilot}</div>
+                <div className="text-[10px] text-text-secondary uppercase tracking-widest">Krok 3</div>
               </div>
             </button>
           </div>
 
-          {/* Recent History */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-6">{t.dashboard_recent}</h3>
-            <div className="bg-slate-900/30 rounded-3xl border border-white/5 p-2 overflow-hidden">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-text-secondary">{t.dashboard_recent}</h3>
+              <span className="text-[10px] font-mono text-text-secondary">{recentHistory.length} záznamů</span>
+            </div>
+            <div className="border border-border-subtle bg-surface">
               {recentHistory.length > 0 ? (
                 recentHistory.slice(-5).reverse().map((entry, idx) => (
-                  <div 
-                    key={idx} 
-                    className="flex items-center justify-between p-4 hover:bg-white/5 rounded-2xl transition-colors cursor-default"
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-4 border-b border-border-subtle last:border-b-0"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-800 rounded-lg">
-                        <HistoryIcon className="w-4 h-4 text-slate-400" />
+                      <div className="p-2 border border-border-subtle">
+                        <HistoryIcon className="w-4 h-4 text-text-secondary" />
                       </div>
-                      <span className="text-sm font-bold text-slate-300">{entry.actionName}</span>
+                      <span className="text-sm font-bold text-text-primary">{entry.actionName}</span>
                     </div>
-                    <span className="text-[10px] text-slate-600 font-mono">{entry.state.length} files</span>
+                    <span className="text-[10px] text-text-secondary font-mono">{entry.state.length} souborů</span>
                   </div>
                 ))
               ) : (
-                <div className="p-12 text-center text-slate-600 italic text-sm">
-                  {t.dashboard_no_recent}
-                </div>
+                <div className="p-8 text-center text-text-secondary text-sm">{t.dashboard_no_recent}</div>
               )}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

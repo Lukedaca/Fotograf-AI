@@ -1,97 +1,56 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import url('https://fonts.cdnfonts.com/css/clash-display');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-void: #0a0a0b;
-  --bg-surface: #111113;
-  --bg-elevated: #1a1a1d;
-  --accent-primary: #ff6b35;
-  --accent-secondary: #00d4aa;
-  --accent-warning: #ffd23f;
-  --text-primary: #fafafa;
-  --text-secondary: #888888;
-  --border-subtle: #2a2a2d;
+  --bg-void: #000000;
+  --bg-surface: #0d0d0d;
+  --bg-elevated: #1a1a1a;
+  --accent-primary: #ff0040;
+  --accent-secondary: #ff3366;
+  --accent-warning: #ffcc00;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --border-subtle: #1f1f1f;
 }
 
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   background-color: var(--bg-void);
   color: white;
   overflow-x: hidden;
 }
 
-/* Wow Animated Mesh Background */
-.mesh-gradient {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  background: var(--bg-void);
-  overflow: hidden;
+* {
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-.mesh-ball {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.15;
-  animation: move 25s infinite alternate;
+[class*="bg-gradient"] {
+  background-image: none !important;
 }
 
-@keyframes move {
-  from {
-    transform: translate(-20%, -20%) rotate(0deg);
-  }
-  to {
-    transform: translate(40%, 40%) rotate(360deg);
-  }
+[class*="backdrop-blur"] {
+  backdrop-filter: none !important;
 }
 
-.aurora-text-glow {
-  display: inline-block;
-  padding: 0.2em 0;
-  line-height: 1.1;
-  text-shadow: 0 0 30px rgba(34, 139, 230, 0.3);
+[class*="blur"] {
+  filter: none !important;
 }
 
-.glass-card {
-  background: rgba(30, 41, 59, 0.4);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+.heading {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.shimmer-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer-btn::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transform: rotate(45deg);
-  animation: shimmer 4s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) rotate(45deg);
-  }
+.body-text {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -103,6 +62,5 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
+  background: #1f1f1f;
 }

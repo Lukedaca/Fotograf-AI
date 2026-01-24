@@ -2,6 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { AnalysisResult, AutoCropResult, AutoCropSuggestion, CropCoordinates, Language, QualityAssessment } from '../types';
 import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
+import { sanitizeText } from '../utils/text';
 import { getApiKey } from '../utils/apiKey';
 
 function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
@@ -10,7 +11,7 @@ function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
     }
 
     try {
-        let cleanText = text.trim();
+        let cleanText = sanitizeText(text).trim();
         if (cleanText.startsWith('```json')) {
             cleanText = cleanText.slice(7);
         }
@@ -154,12 +155,12 @@ export const generateYouTubeThumbnail = async (
     return withRetry(async () => {
         const ai = getGenAI();
         
-        const prompt = `Create a ultra-high quality, viral YouTube Thumbnail from scratch. 
-        Subject: ${topic}. 
-        MANDATORY Text Overlay: "${textOverlay}". 
-        Composition: High-contrast, vibrant saturated colors, cinematic rim lighting, 
-        optimized for maximum Click-Through Rate (CTR). Typography should be huge, bold, and 3D. 
-        Ensure a professional creator aesthetic.`;
+        const prompt = `Vytvoř ultra-kvalitní virální YouTube miniaturu od nuly.
+        Téma: ${topic}.
+        POVINNÝ text: "${textOverlay}".
+        Kompozice: vysoký kontrast, syté barvy, filmové konturové světlo,
+        optimalizováno pro maximální CTR. Typografie musí být velká, výrazná a 3D.
+        Drž profesionální creator estetiku.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-image-preview',
@@ -198,7 +199,7 @@ export const analyzeImage = async (file: File, language: Language = 'cs'): Promi
       contents: {
         parts: [
           { inlineData: { mimeType: file.type, data: base64Image } },
-          { text: `Analyze this photograph. Provide description, suggestions, technical info. Respond in ${language === 'cs' ? 'Czech' : 'English'}.` },
+          { text: 'Analyzuj tuto fotografii. Vrať popis, doporučení a technické informace. Odpověz česky.' },
         ],
       },
       config: { responseMimeType: 'application/json' }
@@ -216,7 +217,7 @@ export const autopilotImage = async (file: File): Promise<{ file: File }> => {
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: "Enhance this photo professionally focusing on color and dynamic range." },
+                    { text: "Vylepši tuto fotografii profesionálně se zaměřením na barvy a dynamický rozsah." },
                 ],
             }
         });
@@ -246,7 +247,7 @@ export const removeBackground = async (file: File): Promise<{ file: File }> => {
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: 'Remove the background. Keep the main subject sharp. Output with transparent background.' }
+                    { text: 'Odstraň pozadí. Hlavní subjekt ponech ostrý. Výstup s transparentním pozadím.' }
                 ]
             }
         });
@@ -264,7 +265,7 @@ export const replaceBackground = async (file: File, description: string): Promis
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: `Replace the background with: ${description}. Keep the subject intact and realistic lighting.` }
+                    { text: `Nahraď pozadí za: ${description}. Subjekt ponech beze změn a zachovej realistické světlo.` }
                 ]
             }
         });
@@ -282,7 +283,7 @@ export const enhanceFaces = async (file: File): Promise<{ file: File }> => {
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: 'Subtle face enhancement: clean skin, brighten eyes, reduce blemishes, keep it natural.' }
+                    { text: 'Jemné vylepšení obličeje: sjednotit pleť, rozjasnit oči, redukovat nedokonalosti, zachovat přirozenost.' }
                 ]
             }
         });
@@ -299,15 +300,15 @@ export const analyzeForAutoCrop = async (
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const { width, height } = imageSize;
-        const prompt = `Analyze this image for optimal cropping.
-Return JSON only. Use pixel coordinates in the original image space (0..width/height).
-Image size: ${width}x${height}.
-Requirements:
-1) Identify the main subject bounding box
-2) Return safe zone where important content must remain
-3) Provide suggested crops for aspect ratios: 1:1, 4:3, 3:2, 16:9
-4) Provide confidence 0-1 for each suggestion
-JSON shape:
+        const prompt = `Analyzuj obrázek pro optimální ořez.
+Vrať pouze JSON. Použij pixelové souřadnice v původním prostoru (0..width/height).
+Velikost obrázku: ${width}x${height}.
+Požadavky:
+1) Urči bounding box hlavního subjektu
+2) Vrať safe zónu, kde musí zůstat důležitý obsah
+3) Navrhni ořez pro poměry: 1:1, 4:3, 3:2, 16:9
+4) Uveď confidence 0-1 pro každý návrh
+JSON tvar:
 {
   "mainSubject": { "x": number, "y": number, "width": number, "height": number },
   "facesBoundingBox": { "x": number, "y": number, "width": number, "height": number } | null,
@@ -346,7 +347,7 @@ export const assessQuality = async (file: File): Promise<QualityAssessment> => {
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: "Rate photo technical quality 0-100 and give flags like Blurry, Sharp, Noise etc." }
+                    { text: "Ohodnoť technickou kvalitu fotografie 0-100 a vrať flagy jako Rozmazané, Ostré, Šum apod." }
                 ]
             },
             config: { responseMimeType: 'application/json' }

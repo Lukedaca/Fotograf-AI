@@ -36,15 +36,15 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
 
   return (
     <div className={`transition-all duration-500 transform ${isFading ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-        <div className="flex flex-col items-center gap-3 bg-slate-900/90 backdrop-blur-xl px-6 py-4 rounded-2xl border border-slate-700 shadow-2xl ring-1 ring-slate-800">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Hodnocení AI výsledku</p>
+        <div className="flex flex-col items-center gap-3 bg-surface px-6 py-4 border border-border-subtle">
+            <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">Hodnocení AI výsledku</p>
             
             <div className="flex items-center gap-6">
                 {/* DISLIKE BUTTON - RED */}
                 <button
                     onClick={() => handleFeedbackClick('bad')}
                     disabled={!!feedbackGiven}
-                    className={`group flex flex-col items-center gap-1 transition-all duration-300 ${
+                    className={`group flex flex-col items-center gap-1 transition-none ${
                         feedbackGiven === 'bad' 
                             ? 'scale-110' 
                             : feedbackGiven === 'good'
@@ -53,22 +53,22 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                     }`}
                     title="Nelíbí se mi (AI se z toho poučí)"
                 >
-                    <div className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                    <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'bad'
-                            ? 'bg-red-500 text-white border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                            : 'bg-slate-800/50 border-slate-600 text-slate-400 group-hover:border-red-500 group-hover:text-red-400 group-hover:bg-red-500/10'
+                            ? 'bg-error text-void border-error'
+                            : 'bg-elevated border-border-subtle text-text-secondary group-hover:border-error group-hover:text-error'
                     }`}>
                         <ThumbsDownIcon className="w-8 h-8" />
                     </div>
                 </button>
 
-                <div className="w-px h-10 bg-slate-700/50"></div>
+                <div className="w-px h-10 bg-border-subtle"></div>
 
                 {/* LIKE BUTTON - GREEN */}
                 <button
                     onClick={() => handleFeedbackClick('good')}
                     disabled={!!feedbackGiven}
-                    className={`group flex flex-col items-center gap-1 transition-all duration-300 ${
+                    className={`group flex flex-col items-center gap-1 transition-none ${
                         feedbackGiven === 'good' 
                             ? 'scale-110' 
                             : feedbackGiven === 'bad'
@@ -77,10 +77,10 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                     }`}
                     title="Líbí se mi (Uložit preferenci)"
                 >
-                    <div className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
+                    <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'good'
-                            ? 'bg-green-500 text-white border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]'
-                            : 'bg-slate-800/50 border-slate-600 text-slate-400 group-hover:border-green-500 group-hover:text-green-400 group-hover:bg-green-500/10'
+                            ? 'bg-success text-void border-success'
+                            : 'bg-elevated border-border-subtle text-text-secondary group-hover:border-success group-hover:text-success'
                     }`}>
                         <ThumbsUpIcon className="w-8 h-8" />
                     </div>
@@ -88,8 +88,8 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
             </div>
 
             {feedbackGiven && (
-                <div className="mt-1 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 animate-fade-in-up">
-                    <p className={`text-xs font-medium ${feedbackGiven === 'good' ? 'text-green-400' : 'text-red-400'}`}>
+                <div className="mt-1 px-3 py-1 bg-elevated border border-border-subtle animate-fade-in-up">
+                    <p className={`text-xs font-medium ${feedbackGiven === 'good' ? 'text-success' : 'text-error'}`}>
                         {feedbackGiven === 'good' ? 'Preference uložena' : 'Budeme ladit model'}
                     </p>
                 </div>

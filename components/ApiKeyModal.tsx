@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { KeyIcon, XIcon } from './icons';
 import { useTranslation } from '../contexts/LanguageContext';
+import Button from './common/Button';
 import { clearApiKey, getApiKey, isSessionOnly, setApiKey, setSessionOnly } from '../utils/apiKey';
 
 interface ApiKeyModalProps {
@@ -37,63 +38,64 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
-        <div className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl relative">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 animate-fade-in">
+        <div className="w-full max-w-lg bg-surface border border-border-subtle overflow-hidden relative">
             <button 
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-full transition-all"
+                className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary border border-border-subtle"
             >
                 <XIcon className="w-5 h-5" />
             </button>
 
             <div className="p-8">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-cyan-500/10 rounded-xl">
-                        <KeyIcon className="w-6 h-6 text-cyan-400" />
+                    <div className="p-3 border border-border-subtle">
+                        <KeyIcon className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white">API Key Selection</h2>
-                        <p className="text-xs text-slate-400">Google Gemini API</p>
+                        <h2 className="text-xl heading">API klíč</h2>
+                        <p className="text-xs text-text-secondary uppercase tracking-widest">Google Gemini API</p>
                     </div>
                 </div>
 
-                <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                <p className="text-sm text-text-secondary mb-6 leading-relaxed">
                     Zadejte API klíč pro Google Gemini. Uloží se pouze lokálně v prohlížeči.
                 </p>
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="block text-xs text-slate-400">API Key</label>
+                        <label className="block text-xs text-text-secondary uppercase tracking-widest">API klíč</label>
                         <input
                             type="password"
                             value={apiKeyInput}
                             onChange={(e) => setApiKeyInput(e.target.value)}
                             placeholder="AIza..."
-                            className="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+                            className="w-full bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
                         />
                         {storedKey && (
-                            <p className="text-[11px] text-emerald-400">Uložený klíč: ••••••••{storedKey.slice(-4)}</p>
+                            <p className="text-[11px] text-success">Uložený klíč: ••••••••{storedKey.slice(-4)}</p>
                         )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <button
+                        <Button
                             onClick={handleSave}
-                            className="py-3 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:from-cyan-600 hover:to-fuchsia-700 transition-all transform hover:-translate-y-0.5 shadow-lg aurora-glow"
+                            className="py-3 text-xs"
                         >
                             {storedKey ? 'Aktualizovat klíč' : 'Uložit klíč'}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleClear}
-                            className="py-3 rounded-xl font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all"
+                            variant="secondary"
+                            className="py-3 text-xs"
                             disabled={!storedKey}
                         >
                             Smazat klíč
-                        </button>
+                        </Button>
                     </div>
 
                     <div className="mt-4 space-y-3">
-                        <label className="flex items-center gap-2 text-xs text-slate-400">
+                        <label className="flex items-center gap-2 text-xs text-text-secondary">
                             <input
                                 type="checkbox"
                                 checked={sessionOnly}
@@ -103,15 +105,15 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                                     setSessionOnly(next);
                                 }}
                             />
-                            Vymazat klĂ­ÄŤ po zavĹ™enĂ­ prohlĂ­ĹľeÄŤe
+                            Vymazat klíč po zavření prohlížeče
                         </label>
-                        <div className="text-[11px] text-slate-500 leading-relaxed border border-slate-800 rounded-lg p-3 bg-slate-950">
-                            VĂˇĹˇ API klĂ­ÄŤ zĹŻstĂˇvĂˇ pouze v tomto prohlĂ­ĹľeÄŤi. Nikdy ho neodesĂ­lĂˇme na server ani na GitHub.
+                        <div className="text-[11px] text-text-secondary leading-relaxed border border-border-subtle p-3 bg-elevated">
+                            Váš API klíč zůstává pouze v tomto prohlížeči. Nikdy ho neodesíláme na server ani na GitHub.
                         </div>
                     </div>
 
-                    <div className="mt-6 text-center text-xs text-slate-500">
-                        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">Billing Information</a>
+                    <div className="mt-6 text-center text-xs text-text-secondary">
+                        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-accent hover:underline">Informace o účtování</a>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './Header';
@@ -168,7 +168,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
-    setLoadingMessage("OdstraĹuji pozadĂ­...");
+    setLoadingMessage("Odstraňuji pozadí...");
     try {
         const { file: newFile } = await geminiService.removeBackground(activeFile.file);
         const url = createTrackedUrl(newFile);
@@ -191,11 +191,11 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 5;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Nahrazuji pozadĂ­...");
+    setLoadingMessage("Nahrazuji pozadí...");
     try {
         const { file: newFile } = await geminiService.replaceBackground(activeFile.file, bgPrompt.trim());
         const url = createTrackedUrl(newFile);
-        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Background Replacement');
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Výměna pozadí');
         setBgPrompt('');
         setShowBgModal(false);
         addNotification(trans.msg_success, 'info');
@@ -215,7 +215,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 3;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("VylepĹˇuji obliÄŤeje...");
+    setLoadingMessage("Vylepšuji obličeje...");
     try {
         const { file: newFile } = await geminiService.enhanceFaces(activeFile.file);
         const url = createTrackedUrl(newFile);
@@ -237,7 +237,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 2;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("HodnotĂ­m kvalitu...");
+    setLoadingMessage("Hodnotím kvalitu...");
     try {
         const result = await geminiService.assessQuality(activeFile.file);
         setQualityAssessment(result);
@@ -301,7 +301,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
-    setLoadingMessage("AI hledĂˇ nejlepĹˇĂ­ oĹ™ez...");
+    setLoadingMessage("AI hledá nejlepší ořez...");
     try {
         const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
         const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
@@ -317,7 +317,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
             cropRect: best.rect,
             aspectRatio: undefined
         }));
-        addNotification('Auto-crop pĹ™ipraven (1-3)', 'info');
+        addNotification('Auto-ořez připraven (1–3)', 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
@@ -379,7 +379,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 2;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("VybĂ­rĂˇm hlavnĂ­ objekt...");
+    setLoadingMessage("Vybírám hlavní objekt...");
     try {
         const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
         const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
@@ -391,7 +391,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
             cropRect: result.mainSubject,
             aspectRatio: undefined
         }));
-        addNotification('Objekt vybrĂˇn', 'info');
+        addNotification('Objekt vybrán', 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
@@ -434,32 +434,32 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
           }
 
           if (command.includes('jas') || command.includes('brightness')) {
-              if (command.includes('vĂ­c') || command.includes('up')) {
+              if (command.includes('víc') || command.includes('up')) {
                   setManualEdits(prev => ({...prev, brightness: Math.min(100, prev.brightness + 10)}));
-              } else if (command.includes('mĂ©nÄ›') || command.includes('down')) {
+              } else if (command.includes('méně') || command.includes('down')) {
                    setManualEdits(prev => ({...prev, brightness: Math.max(-100, prev.brightness - 10)}));
               }
-          } else if (command.includes('auto crop') || command.includes('oĹ™ez') || command.includes('crop')) {
+          } else if (command.includes('auto crop') || command.includes('ořez') || command.includes('crop')) {
               handleAutoCrop();
-          } else if (command.includes('remove background') || command.includes('remove bg') || command.includes('odstraĹ pozad')) {
+          } else if (command.includes('remove background') || command.includes('remove bg') || command.includes('odstraň pozad')) {
               handleBackgroundRemoval();
-          } else if (command.includes('replace background') || command.includes('vymÄ›nit pozad')) {
+          } else if (command.includes('replace background') || command.includes('vyměnit pozad')) {
               setShowBgModal(true);
-          } else if (command.includes('face') || command.includes('obliÄŤej')) {
+          } else if (command.includes('face') || command.includes('obličej')) {
               handleFaceEnhance();
           } else if (command.includes('score') || command.includes('hodno')) {
               handleScorePhoto();
           } else if (command.includes('compare') || command.includes('porov')) {
               setIsComparing(prev => !prev);
-          } else if (command.includes('export') || command.includes('stĂˇhn')) {
+          } else if (command.includes('export') || command.includes('stáhn')) {
               handleManualExport();
           } else if (command.includes('focus')) {
               setIsFocusMode(true);
-          } else if (command.includes('exit focus') || command.includes('zruĹˇ focus') || command.includes('zpÄ›t')) {
+          } else if (command.includes('exit focus') || command.includes('zruš focus') || command.includes('zpět')) {
               setIsFocusMode(false);
-          } else if (command.includes('undo last 3') || command.includes('vrĂˇĹĄ poslednĂ­ 3')) {
+          } else if (command.includes('undo last 3') || command.includes('vrať poslední 3')) {
               onUndo(); onUndo(); onUndo();
-          } else if (command.includes('undo') || command.includes('zpÄ›t')) {
+          } else if (command.includes('undo') || command.includes('zpět')) {
               onUndo();
           } else if (command.includes('reset')) {
               setManualEdits(INITIAL_EDITS);
@@ -510,22 +510,22 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   useEffect(() => {
     const suggestions: string[] = [];
     if (manualEdits.brightness > 25 && manualEdits.highlights < 10) {
-      suggestions.push('Zkuste snĂ­Ĺľit highlights pro zachovĂˇnĂ­ detailĹŻ.');
+      suggestions.push('Zkuste snížit světla pro zachování detailů.');
     }
     if (manualEdits.brightness < -20 && manualEdits.shadows < 10) {
-      suggestions.push('ZvednÄ›te stĂ­ny pro vĂ­ce detailĹŻ.');
+      suggestions.push('Zvedněte stíny pro více detailů.');
     }
     if (manualEdits.saturation > 35 && manualEdits.vibrance < 10) {
-      suggestions.push('ZvyĹˇte vibrance pro pĹ™irozenÄ›jĹˇĂ­ sytost.');
+      suggestions.push('Zvyšte vibrance pro přirozenější sytost.');
     }
     if (manualEdits.sharpness > 60 && manualEdits.noiseReduction < 10) {
-      suggestions.push('PĹ™idejte lehkou redukci Ĺˇumu pro ÄŤistĹˇĂ­ obraz.');
+      suggestions.push('Přidejte lehkou redukci šumu pro čistší obraz.');
     }
     if (manualEdits.contrast < -20) {
-      suggestions.push('ZvyĹˇte kontrast pro lepĹˇĂ­ dynamiku.');
+      suggestions.push('Zvyšte kontrast pro lepší dynamiku.');
     }
     if (manualEdits.cropRect && !manualEdits.aspectRatio) {
-      suggestions.push('RychlĂ˝ tip: zvaĹľte export do 4:3 nebo 3:2.');
+      suggestions.push('Rychlý tip: zvažte export do 4:3 nebo 3:2.');
     }
     setLiveSuggestions(suggestions.slice(0, 3));
   }, [manualEdits]);
@@ -598,13 +598,13 @@ Text: ${thumbnailText}`,
 
   if (!activeFile && !isYouTubeMode) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-slate-950">
+      <div className="flex-1 flex flex-col h-full bg-void">
          <Header title={trans.app_title} onToggleSidebar={props.onToggleSidebar} credits={credits} />
-         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center">
-            <div className="p-6 bg-slate-900 rounded-3xl mb-6 border border-slate-800">
+         <div className="flex-1 flex flex-col items-center justify-center text-text-secondary p-8 text-center">
+            <div className="p-6 bg-surface mb-6 border border-border-subtle">
                 <UploadIcon className="w-16 h-16 opacity-30" />
             </div>
-            <p className="text-xl font-bold text-slate-300">{trans.editor_no_image}</p>
+            <p className="text-xl font-bold text-text-primary">{trans.editor_no_image}</p>
          </div>
       </div>
     );
@@ -613,48 +613,48 @@ Text: ${thumbnailText}`,
   return (
     <div className="flex-1 flex flex-col h-full bg-void overflow-hidden">
         {!isFocusMode && (
-          <Header title={isYouTubeMode ? "YouTube Thumbnail Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} onBuyCredits={props.onBuyCredits} />
+          <Header title={isYouTubeMode ? "YouTube Studio" : trans.nav_studio} onToggleSidebar={props.onToggleSidebar} credits={credits} onBuyCredits={props.onBuyCredits} />
         )}
         
         {/* Quick Start Ribbon */}
         {!isFocusMode && !isYouTubeMode && activeFile && (
-          <div className="bg-slate-900/40 border-b border-white/5 py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 mr-2">Quick Actions:</span>
-            <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-full border border-cyan-500/20 transition-all text-[11px] font-bold">
+          <div className="bg-void border-b border-border-subtle py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-2">Rychlé akce:</span>
+            <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <AutopilotIcon className="w-3.5 h-3.5" />
-              Base Edit
+              Základní úprava
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 rounded-full border border-fuchsia-500/20 transition-all text-[11px] font-bold">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <EraserIcon className="w-3.5 h-3.5" />
-              Retouch
+              Retuš
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/20 transition-all text-[11px] font-bold">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <AutoCropIcon className="w-3.5 h-3.5" />
-              Auto Crop
+              Auto‑ořez
             </button>
-            <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/20 transition-all text-[11px] font-bold">
+            <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
-              Remove BG
+              Odstranit pozadí
             </button>
-            <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 rounded-full border border-teal-500/20 transition-all text-[11px] font-bold">
+            <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
-              Replace BG
+              Vyměnit pozadí
             </button>
-            <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 rounded-full border border-slate-500/20 transition-all text-[11px] font-bold">
+            <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Select Subject
+              Vybrat subjekt
             </button>
-            <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 rounded-full border border-pink-500/20 transition-all text-[11px] font-bold">
+            <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Face Enhance
+              Vylepšit obličej
             </button>
-            <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/20 transition-all text-[11px] font-bold">
+            <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Score
+              Skóre
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full border border-white/5 transition-all text-[11px] font-bold">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
               <ExportIcon className="w-3.5 h-3.5" />
-              Quick Export
+              Rychlý export
             </button>
           </div>
         )}
@@ -672,14 +672,14 @@ Text: ${thumbnailText}`,
                 <div className="w-full max-w-5xl h-full relative flex items-center justify-center">
                     
                     {!isYouTubeMode && activeFile && (
-                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${isVoiceActive ? 'bg-red-500 animate-pulse text-white' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
+                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-3 border border-border-subtle transition-none ${isVoiceActive ? 'bg-accent text-void' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     )}
 
                     {activeFile ? (
                         <div
-                          className="relative group shadow-2xl rounded-2xl overflow-hidden border border-border-subtle max-h-full max-w-full"
+                          className="relative group border border-border-subtle overflow-hidden max-h-full max-w-full"
                           onDoubleClick={() => setIsFocusMode((prev) => !prev)}
                         >
                            {isComparing ? (
@@ -687,7 +687,7 @@ Text: ${thumbnailText}`,
                            ) : (
                                <>
                                 <div className="relative inline-block">
-                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt="Preview" className="block max-h-full max-w-full object-contain select-none" />
+                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt="Náhled" className="block max-h-full max-w-full object-contain select-none" />
                                   {autoCropSuggestions.length > 0 && autoCropImageSize && (
                                     <div className="absolute inset-0 pointer-events-none">
                                       {autoCropSuggestions.slice(0, 3).map((item, idx) => {
@@ -702,10 +702,10 @@ Text: ${thumbnailText}`,
                                             initial={{ opacity: 0, scale: 0.98 }}
                                             animate={{ opacity: isActive ? 0.9 : 0.45, scale: 1 }}
                                             transition={{ duration: 0.2 }}
-                                            className={`absolute border-2 rounded-xl ${isActive ? 'border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.4)]' : 'border-white/30'}`}
+                                            className={`absolute border-2 ${isActive ? 'border-accent' : 'border-border-subtle'}`}
                                             style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
                                           >
-                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded">
+                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-text-secondary bg-void border border-border-subtle px-2 py-0.5">
                                               {idx + 1}
                                             </div>
                                           </motion.div>
@@ -714,35 +714,35 @@ Text: ${thumbnailText}`,
                                     </div>
                                   )}
                                 </div>
-                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface/90 text-text-primary px-4 py-2 rounded-full text-xs font-bold border border-border-subtle hover:bg-elevated transition-colors z-20">
+                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface text-text-primary px-4 py-2 text-xs font-bold border border-border-subtle z-20">
                                     {trans.compare_btn}
                                 </button>
                                </>
                            )}
                         </div>
                     ) : isYouTubeMode ? (
-                        <div className="w-full h-full border-2 border-dashed border-accent-warning/20 rounded-3xl flex flex-col items-center justify-center bg-surface/60 backdrop-blur-sm group">
-                            <div className="p-8 bg-red-500/5 rounded-full mb-6 group-hover:bg-red-500/10 transition-all duration-500">
+                        <div className="w-full h-full border-2 border-dashed border-accent/40 flex flex-col items-center justify-center bg-surface group">
+                            <div className="p-8 bg-elevated mb-6">
                                 <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
                             </div>
-                            <h2 className="text-2xl font-black text-slate-600 tracking-tighter uppercase">Thumbnail Designer</h2>
+                            <h2 className="text-2xl font-black text-text-secondary tracking-tighter uppercase">Studio miniatur</h2>
                         </div>
                     ) : null}
                 </div>
 
                 {!isYouTubeMode && autoCropSuggestions.length > 0 && (
-                    <div className="absolute bottom-4 left-4 z-40 bg-slate-900/90 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur">
+                    <div className="absolute bottom-4 left-4 z-40 bg-surface border border-border-subtle p-4">
                         <div className="flex items-center justify-between gap-4 mb-3">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-amber-400">AI Crop</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-accent">AI ořez</div>
                             <button
                                 onClick={() => {
                                     setAutoCropSuggestions([]);
                                     setAutoCropImageSize(null);
                                     setManualEdits(prev => ({ ...prev, cropRect: undefined }));
                                 }}
-                                className="text-[10px] text-slate-400 hover:text-white"
+                                className="text-[10px] text-text-secondary hover:text-text-primary"
                             >
-                                Clear
+                                Zrušit
                             </button>
                         </div>
                         <div className="flex gap-2">
@@ -757,23 +757,23 @@ Text: ${thumbnailText}`,
                                             aspectRatio: undefined
                                         }));
                                     }}
-                                    className={`px-3 py-2 rounded-xl text-[11px] font-bold border transition-all ${
+                                    className={`px-3 py-2 text-[11px] font-bold border transition-none ${
                                         autoCropSelectedIndex === index
-                                            ? 'bg-amber-500/20 border-amber-500 text-amber-200'
-                                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+                                            ? 'bg-elevated border-accent text-text-primary'
+                                            : 'bg-elevated border-border-subtle text-text-secondary hover:text-text-primary hover:border-accent'
                                     }`}
                                 >
                                     {index + 1}. {item.aspectRatio}
-                                    <span className="ml-2 text-[10px] text-slate-500">{Math.round((item.confidence || 0) * 100)}%</span>
+                                    <span className="ml-2 text-[10px] text-text-secondary">{Math.round((item.confidence || 0) * 100)}%</span>
                                 </button>
                             ))}
                         </div>
-                        <div className="mt-2 text-[10px] text-slate-500">Hotkeys: 1, 2, 3</div>
+                        <div className="mt-2 text-[10px] text-text-secondary">Zkratky: 1, 2, 3</div>
                     </div>
                 )}
                 
                 {isLoading && (
-                    <div className="absolute inset-0 bg-void/80 backdrop-blur-md z-50 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 bg-void/80 z-50 flex flex-col items-center justify-center">
                         <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
                 )}
@@ -787,26 +787,26 @@ Text: ${thumbnailText}`,
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 40, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-full lg:w-[420px] bg-surface/90 backdrop-blur-3xl border-l border-border-subtle flex flex-col z-20 overflow-y-auto custom-scrollbar"
+              className="w-full lg:w-[420px] bg-surface border-l border-border-subtle flex flex-col z-20 overflow-y-auto custom-scrollbar"
             >
                 
                 {/* Job Log (Recent History) */}
                 <div className="px-8 pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Job Log</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Log úprav</h4>
                     <div className="flex gap-2">
-                      <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 bg-slate-800 rounded-md text-slate-400 hover:text-white disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
-                      <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 bg-slate-800 rounded-md text-slate-400 hover:text-white disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
+                      <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
+                      <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto mb-6">
                     {history.past.slice(-3).map((h, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[10px] text-slate-600">
+                      <div key={i} className="flex items-center gap-2 text-[10px] text-text-secondary">
                         <HistoryIcon className="w-3 h-3" />
                         <span>{h.actionName}</span>
                       </div>
                     ))}
-                    <div className="flex items-center gap-2 text-[10px] text-cyan-400 font-bold">
+                    <div className="flex items-center gap-2 text-[10px] text-accent font-bold">
                         <SparklesIcon className="w-3 h-3" />
                         <span>{history.present.actionName}</span>
                     </div>
@@ -821,15 +821,15 @@ Text: ${thumbnailText}`,
 
                 {!isYouTubeMode && activeFile && (
                     <div className="px-8 mt-4">
-                        <div className="p-4 rounded-xl border border-white/5 bg-slate-900/70">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">AI Suggestions</div>
+                        <div className="p-4 border border-border-subtle bg-elevated">
+                            <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">AI doporučení</div>
                             {liveSuggestions.length === 0 ? (
-                                <div className="text-xs text-slate-500">VĹˇe vypadĂˇ dobĹ™e.</div>
+                                <div className="text-xs text-text-secondary">Vše vypadá dobře.</div>
                             ) : (
                                 <div className="space-y-2">
                                     {liveSuggestions.map((item, idx) => (
-                                        <div key={`${item}-${idx}`} className="text-xs text-slate-400">
-                                            â€¢ {item}
+                                        <div key={`${item}-${idx}`} className="text-xs text-text-secondary">
+                                            • {item}
                                         </div>
                                     ))}
                                 </div>
@@ -840,15 +840,15 @@ Text: ${thumbnailText}`,
 
                 {!isYouTubeMode && activeFile && (
                     <div className="px-8 mt-4">
-                        <div className="p-4 rounded-xl border border-border-subtle bg-surface/80">
+                        <div className="p-4 border border-border-subtle bg-surface">
                             <div className="flex items-center justify-between mb-2">
-                                <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">AI Photo Score</div>
-                                <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">Run</button>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">AI skóre</div>
+                                <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">Spustit</button>
                             </div>
                             {qualityAssessment ? (
                                 <div className="space-y-2 text-xs text-text-secondary">
                                     <div className="flex items-center justify-between">
-                                        <span>Score</span>
+                                        <span>Skóre</span>
                                         <span className="text-text-primary font-bold">{qualityAssessment.score}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
@@ -857,14 +857,14 @@ Text: ${thumbnailText}`,
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {(qualityAssessment.flags || []).slice(0, 6).map((flag) => (
-                                            <span key={flag} className="px-2 py-1 rounded-full border border-border-subtle bg-elevated text-[10px] text-text-secondary">
+                                            <span key={flag} className="px-2 py-1 border border-border-subtle bg-elevated text-[10px] text-text-secondary">
                                                 {flag}
                                             </span>
                                         ))}
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-xs text-text-secondary">ZatĂ­m bez hodnocenĂ­.</div>
+                                <div className="text-xs text-text-secondary">Zatím bez hodnocení.</div>
                             )}
                         </div>
                     </div>
@@ -872,14 +872,14 @@ Text: ${thumbnailText}`,
 
                 {!isYouTubeMode && activeFile && history.past.length > 0 && (
                     <div className="px-8 mt-4">
-                        <div className="p-4 rounded-xl border border-border-subtle bg-surface/80">
+                        <div className="p-4 border border-border-subtle bg-surface">
                             <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">Time Machine</div>
                             <div className="space-y-2">
                                 {history.past.slice(-5).reverse().map((entry, idx) => (
                                     <button
                                         key={`${entry.actionName}-${idx}`}
                                         onClick={() => onSetFiles(() => entry.state, `Time Machine: ${entry.actionName}`)}
-                                        className="w-full text-left text-xs text-text-secondary hover:text-text-primary px-3 py-2 rounded-lg border border-border-subtle bg-elevated/70 hover:bg-elevated transition-all"
+                                        className="w-full text-left text-xs text-text-secondary hover:text-text-primary px-3 py-2 border border-border-subtle bg-elevated hover:bg-elevated transition-none"
                                     >
                                         {entry.actionName}
                                     </button>
@@ -893,18 +893,18 @@ Text: ${thumbnailText}`,
                     {isYouTubeMode && (
                         <div className="space-y-6 animate-fade-in-right">
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{trans.tool_youtube_topic}</label>
-                                <textarea rows={3} value={thumbnailTopic} onChange={(e) => setThumbnailTopic(e.target.value)} placeholder={trans.tool_youtube_topic_ph} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner" />
+                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_topic}</label>
+                                <textarea rows={3} value={thumbnailTopic} onChange={(e) => setThumbnailTopic(e.target.value)} placeholder={trans.tool_youtube_topic_ph} className="w-full bg-elevated border border-border-subtle p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
-                                <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-white focus:ring-2 focus:ring-red-600 outline-none transition-all placeholder:text-slate-700 shadow-inner" />
+                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
+                                <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
-                             <div className="flex items-center justify-between text-xs text-slate-400">
+                             <div className="flex items-center justify-between text-xs text-text-secondary">
                                 <span>{trans.credits_cost}:</span>
-                                <span className="font-bold text-amber-400">10 {trans.credits_remaining}</span>
+                                <span className="font-bold text-warning">10 {trans.credits_remaining}</span>
                              </div>
-                             <button onClick={handleGenerateThumbnail} disabled={isLoading} className="w-full py-5 bg-red-600 hover:bg-red-500 rounded-2xl text-sm font-black text-white shadow-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                             <button onClick={handleGenerateThumbnail} disabled={isLoading} className="w-full py-4 bg-accent text-void text-sm font-black border border-accent transition-none flex items-center justify-center gap-3 disabled:opacity-50">
                                 <SparklesIcon className="w-5 h-5" />
                                 {trans.tool_youtube_btn}
                             </button>
@@ -954,7 +954,7 @@ Text: ${thumbnailText}`,
           <div className="absolute top-4 right-6 z-40">
             <button
               onClick={() => setIsFocusMode(false)}
-              className="px-3 py-2 text-[11px] font-bold rounded-xl border border-border-subtle bg-surface/90 text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+              className="px-3 py-2 text-[11px] font-bold border border-border-subtle bg-surface text-text-secondary hover:text-text-primary hover:bg-elevated transition-none"
             >
               Exit Focus
             </button>
@@ -969,13 +969,13 @@ Text: ${thumbnailText}`,
               onClose={() => setRadialMenu(null)}
               items={[
                 { id: 'autopilot', label: 'Autopilot', onClick: handleAutopilot },
-                { id: 'auto-crop', label: 'Auto Crop', onClick: handleAutoCrop },
-                { id: 'select-subject', label: 'Select Subject', onClick: handleSmartSelect },
-                { id: 'remove-bg', label: 'Remove BG', onClick: handleBackgroundRemoval },
-                { id: 'replace-bg', label: 'Replace BG', onClick: () => setShowBgModal(true) },
-                { id: 'face', label: 'Face Enhance', onClick: handleFaceEnhance },
-                { id: 'score', label: 'Score Photo', onClick: handleScorePhoto },
-                { id: 'compare', label: isComparing ? 'Stop Compare' : 'Compare', onClick: () => setIsComparing((p) => !p) },
+                { id: 'auto-crop', label: 'Auto‑ořez', onClick: handleAutoCrop },
+                { id: 'select-subject', label: 'Vybrat subjekt', onClick: handleSmartSelect },
+                { id: 'remove-bg', label: 'Odstranit pozadí', onClick: handleBackgroundRemoval },
+                { id: 'replace-bg', label: 'Vyměnit pozadí', onClick: () => setShowBgModal(true) },
+                { id: 'face', label: 'Vylepšit obličej', onClick: handleFaceEnhance },
+                { id: 'score', label: 'AI skóre', onClick: handleScorePhoto },
+                { id: 'compare', label: isComparing ? 'Zastavit porovnání' : 'Porovnat', onClick: () => setIsComparing((p) => !p) },
                 { id: 'export', label: 'Export', onClick: handleManualExport },
               ]}
             />
@@ -983,24 +983,24 @@ Text: ${thumbnailText}`,
         </AnimatePresence>
 
         {showBgModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-lg rounded-3xl border border-border-subtle bg-surface p-6 shadow-2xl">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-lg border border-border-subtle bg-surface p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm font-black uppercase tracking-widest text-text-secondary">Replace Background</div>
-                <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">Close</button>
+                <div className="text-sm font-black uppercase tracking-widest text-text-secondary">Vyměnit pozadí</div>
+                <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">Zavřít</button>
               </div>
               <textarea
                 rows={4}
                 value={bgPrompt}
                 onChange={(e) => setBgPrompt(e.target.value)}
-                placeholder="napĹ™. neonovĂˇ ulice v Tokiu, zlatĂˇ hodinka, studio backdrop"
-                className="w-full rounded-xl bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
+                placeholder="např. neonová ulice v Tokiu, zlatá hodinka, studiové pozadí"
+                className="w-full bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
               />
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-[11px] text-text-secondary">Cena: 5 kreditĹŻ</span>
+                <span className="text-[11px] text-text-secondary">Cena: 5 kreditů</span>
                 <button
                   onClick={handleBackgroundReplace}
-                  className="px-4 py-2 rounded-xl text-[11px] font-bold bg-accent-secondary text-void"
+                  className="px-4 py-2 text-[11px] font-bold bg-accent text-void"
                 >
                   Apply
                 </button>
@@ -1013,5 +1013,6 @@ Text: ${thumbnailText}`,
 };
 
 export default EditorView;
+
 
 

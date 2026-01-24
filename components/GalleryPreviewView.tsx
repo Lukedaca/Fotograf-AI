@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+﻿import React, { useMemo, useState, useEffect } from 'react';
 import { useProject } from '../contexts/ProjectContext';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -32,7 +32,7 @@ const GalleryPreviewView: React.FC<GalleryPreviewViewProps> = ({ projectId }) =>
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">
+      <div className="min-h-screen bg-void flex items-center justify-center text-text-secondary">
         {t.crm_gallery_missing}
       </div>
     );
@@ -42,46 +42,46 @@ const GalleryPreviewView: React.FC<GalleryPreviewViewProps> = ({ projectId }) =>
   const visibleFiles = project.files.filter((file) => selectedIds.includes(file.id));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-void text-text-primary">
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black">{project.name}</h1>
-            <p className="text-sm text-slate-500">{t.crm_gallery_title}</p>
+            <p className="text-sm text-text-secondary">{t.crm_gallery_title}</p>
           </div>
           {project.gallery.allowDownload && (
-            <button className="px-5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300">
+            <button className="px-5 py-2 bg-elevated border border-border-subtle text-xs font-semibold text-text-primary">
               {t.crm_download_all}
             </button>
           )}
         </div>
 
         {visibleFiles.length === 0 ? (
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-12 text-center text-slate-500">
+          <div className="bg-surface/40 border border-border-subtle p-12 text-center text-text-secondary">
             {t.crm_gallery_empty}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {visibleFiles.map((file) => (
-              <div key={file.id} className="aspect-[4/3] rounded-2xl overflow-hidden border border-white/10">
+              <div key={file.id} className="aspect-[4/3] overflow-hidden border border-border-subtle">
                 <img src={file.previewUrl} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
         )}
 
-        <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
+        <div className="bg-surface/40 border border-border-subtle p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold">Comments</h3>
-            <span className="text-xs text-slate-500">{comments.length} total</span>
+            <h3 className="text-lg font-bold">Komentáře</h3>
+            <span className="text-xs text-text-secondary">{comments.length} celkem</span>
           </div>
           <div className="space-y-3">
             {comments.length === 0 && (
-              <div className="text-sm text-slate-500">No comments yet.</div>
+              <div className="text-sm text-text-secondary">Zatím bez komentářů.</div>
             )}
             {comments.map((comment) => (
-              <div key={comment.id} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-slate-200">
-                <div className="text-[10px] text-slate-500 mb-1">{new Date(comment.createdAt).toLocaleString()}</div>
+              <div key={comment.id} className="border border-border-subtle bg-black/30 p-4 text-sm text-text-primary">
+                <div className="text-[10px] text-text-secondary mb-1">{new Date(comment.createdAt).toLocaleString()}</div>
                 {comment.text}
               </div>
             ))}
@@ -91,8 +91,8 @@ const GalleryPreviewView: React.FC<GalleryPreviewViewProps> = ({ projectId }) =>
               rows={3}
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
-              placeholder="Leave feedback for the photographer..."
-              className="w-full rounded-xl bg-slate-950 border border-white/10 px-4 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Zanechte zpětnou vazbu fotografovi..."
+              className="w-full bg-void border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
             />
             <button
               onClick={() => {
@@ -103,9 +103,9 @@ const GalleryPreviewView: React.FC<GalleryPreviewViewProps> = ({ projectId }) =>
                 ]);
                 setCommentInput('');
               }}
-              className="self-end px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-white"
+              className="self-end px-4 py-2 text-xs font-bold bg-accent text-void border border-accent"
             >
-              Add Comment
+              Přidat komentář
             </button>
           </div>
         </div>
@@ -115,3 +115,5 @@ const GalleryPreviewView: React.FC<GalleryPreviewViewProps> = ({ projectId }) =>
 };
 
 export default GalleryPreviewView;
+
+

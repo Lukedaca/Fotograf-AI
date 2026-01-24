@@ -1,4 +1,4 @@
-
+﻿
 import React, { useEffect, useRef } from 'react';
 import { calculateHistogram } from '../utils/imageProcessor';
 
@@ -70,9 +70,9 @@ const Histogram: React.FC<HistogramProps> = ({ imageUrl }) => {
     if (!imageUrl) return null;
 
     return (
-        <div className="w-full bg-black/40 rounded-lg p-2 border border-slate-700/50 mb-4">
+        <div className="w-full bg-black/40 rounded-lg p-2 border border-border-subtle/50 mb-4">
             <canvas ref={canvasRef} width={280} height={100} className="w-full h-24" />
-            <div className="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-1">
+            <div className="flex justify-between text-[9px] text-text-secondary font-mono mt-1 px-1">
                 <span>0 (Black)</span>
                 <span>Histogram (RGB+L)</span>
                 <span>255 (White)</span>
@@ -82,3 +82,4 @@ const Histogram: React.FC<HistogramProps> = ({ imageUrl }) => {
 };
 
 export default Histogram;
+

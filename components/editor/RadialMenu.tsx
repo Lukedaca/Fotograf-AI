@@ -26,8 +26,8 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, items, onClose }) => {
         className="absolute"
         style={{ left: x, top: y }}
       >
-        <div className="rounded-2xl border border-border-subtle bg-surface/95 backdrop-blur-xl shadow-2xl p-3 min-w-[180px]">
-          <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-2">Quick Actions</div>
+        <div className="border border-border-subtle bg-surface p-3 min-w-[180px]">
+          <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-2">Rychlé akce</div>
           <div className="flex flex-col gap-2">
             {items.map((item) => (
               <button
@@ -36,7 +36,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, items, onClose }) => {
                   item.onClick();
                   onClose();
                 }}
-                className="text-left px-3 py-2 rounded-xl text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+                className="text-left px-3 py-2 text-[11px] font-semibold text-text-secondary hover:text-text-primary border border-transparent hover:border-accent transition-none"
               >
                 {item.label}
               </button>

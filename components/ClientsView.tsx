@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import Header from './Header';
 import ClientCard from './ClientCard';
 import ClientModal from './ClientModal';
@@ -25,25 +25,25 @@ const ClientsView: React.FC<ClientsViewProps> = ({ title, onToggleSidebar, onOpe
   }, [clients, projects]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
+    <div className="w-full h-full flex flex-col bg-void overflow-y-auto custom-scrollbar">
       <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-7xl mx-auto w-full space-y-8 animate-fade-in">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-3xl font-black text-white">{t.crm_clients_title}</h2>
-            <p className="text-sm text-slate-500">{t.crm_clients_desc}</p>
+            <p className="text-sm text-text-secondary">{t.crm_clients_desc}</p>
           </div>
           <button
             onClick={() => setIsClientModalOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-semibold text-white shadow-lg"
+            className="px-5 py-2.5 border border-accent bg-accent text-sm font-semibold text-void transition-none"
           >
             {t.crm_new_client}
           </button>
         </div>
 
         {clients.length === 0 ? (
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-12 text-center text-slate-500">
+          <div className="bg-surface/40 border border-border-subtle rounded-3xl p-12 text-center text-text-secondary">
             {t.crm_no_clients}
           </div>
         ) : (
@@ -70,3 +70,4 @@ const ClientsView: React.FC<ClientsViewProps> = ({ title, onToggleSidebar, onOpe
 };
 
 export default ClientsView;
+

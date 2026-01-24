@@ -1,6 +1,7 @@
-
+﻿
 import React from 'react';
 import { KeyIcon, MenuIcon, SparklesIcon } from './icons';
+import Button from './common/Button';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface HeaderProps {
@@ -15,11 +16,11 @@ const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyC
   const { language, setLanguage, t } = useTranslation();
 
   return (
-    <header className="flex-shrink-0 flex items-center h-20 px-4 sm:px-8 border-b border-slate-800/50 w-full backdrop-blur-xl">
+    <header className="flex-shrink-0 flex items-center h-20 px-4 sm:px-8 border-b border-gray-800 w-full bg-void">
       {/* Mobile Menu Button */}
       <button
         onClick={onToggleSidebar}
-        className="lg:hidden p-2 -ml-2 mr-4 text-slate-400"
+        className="lg:hidden p-2 -ml-2 mr-4 text-text-secondary"
         aria-label="Otevřít menu"
       >
         <MenuIcon className="w-6 h-6" />
@@ -27,47 +28,38 @@ const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyC
 
       {/* Title */}
       <div className="flex-1">
-          <h1 className="text-2xl font-bold text-slate-100">{title}</h1>
+          <h1 className="text-lg font-bold text-white heading">{title}</h1>
       </div>
 
       {/* Right side actions */}
       <div className="flex items-center space-x-3 sm:space-x-4">
 
         {onOpenApiKeyModal && (
-            <button
-                onClick={onOpenApiKeyModal}
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-full border border-slate-700/50 hover:bg-slate-700 transition-all"
-                title="API Key"
-            >
-                <KeyIcon className="w-4 h-4 text-cyan-400" />
-                <span className="text-[10px] font-bold text-slate-200">API</span>
-            </button>
+            <Button onClick={onOpenApiKeyModal} variant="secondary" className="hidden sm:flex items-center gap-2">
+                <KeyIcon className="w-4 h-4 text-accent" />
+                <span>API</span>
+            </Button>
         )}
         
         {/* Credits Display */}
         {credits !== undefined && (
-            <button 
-                onClick={onBuyCredits}
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-full border border-slate-700/50 hover:bg-slate-700 hover:border-amber-400/50 transition-all cursor-pointer group" 
-                title={t.credits_buy}
-            >
-                <SparklesIcon className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold text-slate-200">{credits}</span>
-                <span className="ml-1 text-[10px] text-cyan-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">+</span>
-            </button>
+            <Button onClick={onBuyCredits} variant="secondary" className="hidden sm:flex items-center gap-2" title={t.credits_buy}>
+                <SparklesIcon className="w-4 h-4 text-warning" />
+                <span>{credits}</span>
+            </Button>
         )}
 
         {/* Language Toggle */}
-        <div className="flex bg-slate-800/80 rounded-lg p-1 border border-slate-700/50">
+        <div className="flex bg-void border border-gray-800 p-1">
             <button 
                 onClick={() => setLanguage('cs')} 
-                className={`px-2 py-1 text-xs font-bold rounded transition-all ${language === 'cs' ? 'bg-cyan-500/20 text-cyan-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`px-2 py-1 text-xs font-bold uppercase tracking-widest transition-none ${language === 'cs' ? 'bg-accent text-black' : 'text-gray-500'}`}
             >
                 CZ
             </button>
             <button 
                 onClick={() => setLanguage('en')} 
-                className={`px-2 py-1 text-xs font-bold rounded transition-all ${language === 'en' ? 'bg-cyan-500/20 text-cyan-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`px-2 py-1 text-xs font-bold uppercase tracking-widest transition-none ${language === 'en' ? 'bg-accent text-black' : 'text-gray-500'}`}
             >
                 EN
             </button>
@@ -78,3 +70,4 @@ const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyC
 };
 
 export default Header;
+

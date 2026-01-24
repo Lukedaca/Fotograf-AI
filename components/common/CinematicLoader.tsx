@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const CinematicLoader: React.FC<{ label?: string }> = ({ label = 'Processing' }) => {
+const CinematicLoader: React.FC<{ label?: string }> = ({ label = 'Zpracovávám' }) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="relative w-24 h-24">
@@ -11,7 +11,7 @@ const CinematicLoader: React.FC<{ label?: string }> = ({ label = 'Processing' })
           transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
         />
         <motion.div
-          className="absolute inset-3 rounded-full border-2 border-accent-secondary/60"
+          className="absolute inset-3 rounded-full border-2 border-accent/60"
           animate={{ rotate: -360 }}
           transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
         />

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import Header from './Header';
 import { useProject } from '../contexts/ProjectContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -19,39 +19,39 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({ title, onToggleSide
   const clientProjects = projects.filter((project) => project.clientId === clientId);
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
+    <div className="w-full h-full flex flex-col bg-void overflow-y-auto custom-scrollbar">
       <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-6xl mx-auto w-full space-y-8 animate-fade-in">
         {!client ? (
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-12 text-center text-slate-500">
+          <div className="bg-surface/40 border border-border-subtle rounded-3xl p-12 text-center text-text-secondary">
             {t.crm_client_missing}
           </div>
         ) : (
           <>
-            <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
+            <div className="bg-surface/40 border border-border-subtle rounded-3xl p-6 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-3xl font-black text-white">{client.name}</h2>
-                  <p className="text-sm text-slate-500">{client.email}</p>
+                  <p className="text-sm text-text-secondary">{client.email}</p>
                 </div>
                 {client.phone && (
-                  <span className="px-4 py-2 rounded-full border border-white/10 text-xs text-slate-300">
+                  <span className="px-4 py-2 rounded-full border border-border-subtle text-xs text-text-primary">
                     {client.phone}
                   </span>
                 )}
               </div>
               {client.notes && (
-                <p className="text-sm text-slate-400">{client.notes}</p>
+                <p className="text-sm text-text-secondary">{client.notes}</p>
               )}
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-text-secondary">
                 {t.crm_projects_title}
               </h3>
               {clientProjects.length === 0 ? (
-                <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-10 text-center text-slate-500">
+                <div className="bg-surface/40 border border-border-subtle rounded-3xl p-10 text-center text-text-secondary">
                   {t.crm_no_projects}
                 </div>
               ) : (
@@ -75,3 +75,4 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({ title, onToggleSide
 };
 
 export default ClientDetailView;
+

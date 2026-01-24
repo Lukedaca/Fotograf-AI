@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import Header from './Header';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useProject } from '../contexts/ProjectContext';
@@ -119,7 +119,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
+    <div className="w-full h-full flex flex-col bg-void overflow-y-auto custom-scrollbar">
       <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} credits={credits} onBuyCredits={onBuyCredits} />
 
       <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full space-y-6">
@@ -129,14 +129,14 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t.ai_gallery_search}
-              className="w-full bg-slate-900/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+              className="w-full bg-surface/60 border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
             />
           </div>
           <div className="flex items-center gap-3">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as AIGalleryType | 'all')}
-              className="bg-slate-900/60 border border-white/10 rounded-xl px-3 py-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+              className="bg-surface/60 border border-border-subtle rounded-xl px-3 py-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
             >
               <option value="all">{t.ai_gallery_filter_all}</option>
               <option value="generate">{t.ai_gallery_filter_generate}</option>
@@ -147,9 +147,9 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
         </div>
 
         {isLoading ? (
-          <div className="text-slate-500 text-sm">{t.ai_gallery_loading}</div>
+          <div className="text-text-secondary text-sm">{t.ai_gallery_loading}</div>
         ) : filteredItems.length === 0 ? (
-          <div className="text-slate-500 text-sm">{t.ai_gallery_empty}</div>
+          <div className="text-text-secondary text-sm">{t.ai_gallery_empty}</div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filteredItems.map((item) => (
@@ -157,7 +157,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
                 key={item.id}
                 onClick={() => setSelectedId(item.id)}
                 className={`relative aspect-[4/3] rounded-2xl overflow-hidden border transition-all ${
-                  item.id === selectedId ? 'border-cyan-500/70 ring-2 ring-cyan-500/30' : 'border-white/10'
+                  item.id === selectedId ? 'border-accent/70 ring-2 ring-accent/30' : 'border-border-subtle'
                 }`}
               >
                 <img src={previewUrls[item.id]} alt={item.fileName} className="w-full h-full object-cover" />
@@ -171,19 +171,19 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
         )}
 
         {selectedItem && (
-          <div className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 space-y-4">
+          <div className="bg-surface/40 border border-border-subtle rounded-3xl p-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-sm text-slate-200 font-bold">{selectedItem.fileName}</div>
-                <div className="text-xs text-slate-500">{new Date(selectedItem.createdAt).toLocaleString()}</div>
+                <div className="text-sm text-text-primary font-bold">{selectedItem.fileName}</div>
+                <div className="text-xs text-text-secondary">{new Date(selectedItem.createdAt).toLocaleString()}</div>
                 {selectedItem.prompt && (
-                  <p className="text-sm text-slate-400 mt-3">{selectedItem.prompt}</p>
+                  <p className="text-sm text-text-secondary mt-3">{selectedItem.prompt}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownload(selectedItem)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-white/10 text-slate-300 hover:border-cyan-500/40"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-border-subtle text-text-primary hover:border-accent/40"
                 >
                   {t.ai_gallery_download}
                 </button>
@@ -200,7 +200,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
               <select
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="bg-surface/60 border border-border-subtle rounded-xl px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
               >
                 <option value="">{t.ai_gallery_select_project}</option>
                 {projects.map((project) => (
@@ -210,7 +210,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
               <button
                 onClick={() => handleAddToProject(selectedItem)}
                 disabled={!selectedProjectId}
-                className="px-4 py-2 rounded-xl text-xs font-semibold border border-white/10 text-slate-300 hover:border-cyan-500/40 disabled:opacity-50"
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-border-subtle text-text-primary hover:border-accent/40 disabled:opacity-50"
               >
                 {t.ai_gallery_add_to_project}
               </button>
@@ -223,3 +223,5 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
 };
 
 export default AIGalleryView;
+
+

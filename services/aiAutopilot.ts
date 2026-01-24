@@ -29,36 +29,36 @@ const buildStyleHint = () => {
   const hints: string[] = [];
   const pushHint = (label: string, value: number) => {
     if (Math.abs(value) < 0.2) return;
-    hints.push(`${label}: ${value > 0 ? 'increase' : 'decrease'} slightly`);
+    hints.push(`${label}: ${value > 0 ? 'zvýšit' : 'snížit'} lehce`);
   };
-  pushHint('brightness', autopilotTendencies.brightness);
-  pushHint('contrast', autopilotTendencies.contrast);
-  pushHint('saturation', autopilotTendencies.saturation);
+  pushHint('jas', autopilotTendencies.brightness);
+  pushHint('kontrast', autopilotTendencies.contrast);
+  pushHint('sytost', autopilotTendencies.saturation);
   pushHint('vibrance', autopilotTendencies.vibrance);
-  pushHint('shadows', autopilotTendencies.shadows);
-  pushHint('highlights', autopilotTendencies.highlights);
-  pushHint('clarity', autopilotTendencies.clarity);
-  pushHint('sharpness', autopilotTendencies.sharpness);
-  pushHint('noise reduction', autopilotTendencies.noiseReduction);
-  if (hints.length === 0) return 'No strong preferences detected yet.';
+  pushHint('stíny', autopilotTendencies.shadows);
+  pushHint('světla', autopilotTendencies.highlights);
+  pushHint('jasnost', autopilotTendencies.clarity);
+  pushHint('ostrost', autopilotTendencies.sharpness);
+  pushHint('redukce šumu', autopilotTendencies.noiseReduction);
+  if (hints.length === 0) return 'Zatím bez výrazných preferencí.';
   return hints.join(', ');
 };
 
 const createPrompt = (mode: EnhancementMode) => {
-  const base = 'Enhance this photo professionally focusing on color, light, and dynamic range.';
+  const base = 'Vylepši tuto fotografii profesionálně se zaměřením na barvy, světlo a dynamický rozsah.';
   const modeHints: Record<EnhancementMode, string> = {
-    auto: 'General best look, preserve realism.',
-    portrait: 'Natural skin tones, eye detail, gentle contrast.',
-    landscape: 'Vibrant skies, depth, crisp details.',
-    product: 'Clean background, true colors, sharp edges.',
-    food: 'Warm tones, appetizing colors, soft highlights.',
-    'real-estate': 'Straight lines, balanced exposure, HDR feel.',
-    'social-media': 'High impact, vibrant colors, punchy contrast.',
-    print: 'Color accuracy, balanced contrast for print.',
-    cinematic: 'Film-like grade, subtle contrast, slight vignette.',
-    'your-style': `Match the user's editing tendencies. Preferences: ${buildStyleHint()}`,
+    auto: 'Obecně nejlepší vzhled, zachovat realismus.',
+    portrait: 'Přirozené pleťové tóny, detail očí, jemný kontrast.',
+    landscape: 'Syté nebe, hloubka, ostré detaily.',
+    product: 'Čisté pozadí, věrné barvy, ostré hrany.',
+    food: 'Teplé tóny, chutné barvy, jemná světla.',
+    'real-estate': 'Rovné linie, vyvážená expozice, HDR dojem.',
+    'social-media': 'Vysoký dopad, živé barvy, výrazný kontrast.',
+    print: 'Barevná přesnost, vyvážený kontrast pro tisk.',
+    cinematic: 'Filmové ladění, jemný kontrast, lehká vinětace.',
+    'your-style': `Přizpůsobit podle tendencí uživatele. Preference: ${buildStyleHint()}`,
   };
-  return `${base} Mode: ${mode}. ${modeHints[mode]}`;
+  return `${base} Režim: ${mode}. ${modeHints[mode]}`;
 };
 
 const emptyEdits: ManualEdits = {
@@ -88,20 +88,20 @@ const createPreset = (id: string, name: string, edits: Partial<ManualEdits>) => 
 
 const createStylePresets = (mode: EnhancementMode) => {
   const base = [
-    createPreset('soft', 'Soft Glow', { brightness: 8, highlights: -5, clarity: 5 }),
-    createPreset('punch', 'Punchy', { contrast: 18, saturation: 10, sharpness: 10 }),
-    createPreset('matte', 'Matte', { contrast: -10, shadows: 12, highlights: -8 }),
+    createPreset('soft', 'Jemné světlo', { brightness: 8, highlights: -5, clarity: 5 }),
+    createPreset('punch', 'Výrazné', { contrast: 18, saturation: 10, sharpness: 10 }),
+    createPreset('matte', 'Matné', { contrast: -10, shadows: 12, highlights: -8 }),
   ];
 
   if (mode === 'cinematic') {
     return [
-      createPreset('cine', 'Cinematic', { contrast: 12, saturation: -5, clarity: 8 }),
+      createPreset('cine', 'Filmové', { contrast: 12, saturation: -5, clarity: 8 }),
       ...base,
     ];
   }
   if (mode === 'portrait') {
     return [
-      createPreset('skin', 'Skin Clean', { highlights: -10, clarity: 4, saturation: -5 }),
+      createPreset('skin', 'Čistá pleť', { highlights: -10, clarity: 4, saturation: -5 }),
       ...base,
     ];
   }
@@ -130,10 +130,10 @@ export const runAutopilot = async (file: File, mode: EnhancementMode): Promise<A
     enhancedFile,
     appliedEdits: emptyEdits,
     analysis: {
-      exposure: { value: 0, suggestion: 'Analyzing' },
-      colors: { temperature: 0, saturation: 0, suggestion: 'Analyzing' },
-      composition: { score: 0, suggestion: 'Analyzing' },
-      sharpness: { value: 0, suggestion: 'Analyzing' },
+      exposure: { value: 0, suggestion: 'Analyzuji' },
+      colors: { temperature: 0, saturation: 0, suggestion: 'Analyzuji' },
+      composition: { score: 0, suggestion: 'Analyzuji' },
+      sharpness: { value: 0, suggestion: 'Analyzuji' },
     },
     stylePresets: createStylePresets(mode),
     nextSuggestions: [],

@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState } from 'react';
 import type { ManualEdits, WatermarkSettings } from '../types';
 import { AutoCropIcon, ExportIcon, WatermarkIcon } from './icons';
@@ -17,8 +17,8 @@ interface SliderProps {
 const Slider: React.FC<SliderProps> = ({ label, value, min = -100, max = 100, step = 1, onChange, onAfterChange }) => (
   <div className="space-y-2">
     <div className="flex justify-between items-center">
-      <label className="text-sm font-medium text-slate-300">{label}</label>
-      <span className="text-sm font-mono text-slate-400 w-12 text-right">{value.toFixed(0)}</span>
+      <label className="text-sm font-medium text-text-primary">{label}</label>
+      <span className="text-sm font-mono text-text-secondary w-12 text-right">{value.toFixed(0)}</span>
     </div>
     <input
       type="range"
@@ -91,26 +91,26 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
   return (
     <div className="p-4 space-y-5 animate-fade-in-right pb-20"> {/* Extra padding bottom for export button */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-slate-100">{t.manual_title}</h3>
-        <button onClick={onReset} className="text-sm font-medium text-cyan-400 hover:underline">{t.manual_reset}</button>
+        <h3 className="text-lg font-bold text-text-primary">{t.manual_title}</h3>
+        <button onClick={onReset} className="text-sm font-medium text-accent hover:underline">{t.manual_reset}</button>
       </div>
 
       {/* Crop Section */}
-      <div ref={cropRef} className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+      <div ref={cropRef} className="space-y-3 p-3 bg-elevated/50 rounded-lg border border-border-subtle/50">
           <div className="flex items-center gap-2">
-              <AutoCropIcon className="w-4 h-4 text-cyan-400" />
-              <label className="text-sm font-medium text-slate-300">{t.tool_crop_title}</label>
+              <AutoCropIcon className="w-4 h-4 text-accent" />
+              <label className="text-sm font-medium text-text-primary">{t.tool_crop_title}</label>
           </div>
           
           <button 
               onClick={onStartManualCrop}
-              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-md transition-colors border border-slate-600"
+              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-elevated hover:bg-elevated text-text-primary rounded-md transition-colors border border-border-subtle"
           >
               <span className="mr-2">✂️</span> {t.manual_crop_active}
           </button>
 
-          <div className="pt-2 border-t border-slate-700/50">
-            <label className="text-xs text-slate-400 mb-1 block">Rychlý ořez (Střed)</label>
+          <div className="pt-2 border-t border-border-subtle/50">
+            <label className="text-xs text-text-secondary mb-1 block">Rychlý ořez (Střed)</label>
             <div className="grid grid-cols-5 gap-1">
                 {ASPECT_RATIOS.map((ratio) => (
                     <button
@@ -118,8 +118,8 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                         onClick={() => { handleChange('aspectRatio', ratio.value); onSnapshot(); }}
                         className={`px-1 py-1.5 text-[10px] font-medium rounded border transition-all ${
                             edits.aspectRatio === ratio.value
-                                ? 'bg-cyan-500/20 border-cyan-500 text-white'
-                                : 'border-slate-600 hover:bg-slate-700 text-slate-400'
+                                ? 'bg-accent/20 border-accent text-white'
+                                : 'border-border-subtle hover:bg-elevated text-text-secondary'
                         }`}
                     >
                         {ratio.label}
@@ -148,19 +148,19 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
       </div>
 
       {/* Watermark Section */}
-      <div className="space-y-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+      <div className="space-y-3 p-3 bg-elevated/50 rounded-lg border border-border-subtle/50">
           <button onClick={() => setShowWatermark(!showWatermark)} className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-                <WatermarkIcon className="w-4 h-4 text-cyan-400" />
-                <label className="text-sm font-medium text-slate-300">Inteligentní Vodoznak</label>
+                <WatermarkIcon className="w-4 h-4 text-accent" />
+                <label className="text-sm font-medium text-text-primary">Inteligentní Vodoznak</label>
             </div>
-            <span className="text-xs text-slate-500">{showWatermark ? '▼' : '▶'}</span>
+            <span className="text-xs text-text-secondary">{showWatermark ? '▼' : '▶'}</span>
           </button>
           
           {showWatermark && (
               <div className="space-y-3 pt-2 animate-fade-in">
                   <div className="flex items-center justify-between">
-                     <span className="text-xs text-slate-400">Aktivovat</span>
+                     <span className="text-xs text-text-secondary">Aktivovat</span>
                      <input type="checkbox" checked={edits.watermark?.enabled || false} onChange={(e) => updateWatermark({ enabled: e.target.checked })} />
                   </div>
                   {edits.watermark?.enabled && (
@@ -170,7 +170,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                             value={edits.watermark?.text || ''} 
                             onChange={(e) => updateWatermark({ text: e.target.value })}
                             placeholder="© Váš text"
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white"
+                            className="w-full bg-surface border border-border-subtle rounded p-2 text-xs text-white"
                         />
                         <div className="grid grid-cols-2 gap-2">
                              <input 
@@ -182,7 +182,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                              <select 
                                 value={edits.watermark?.position || 'bottom-right'}
                                 onChange={(e) => updateWatermark({ position: e.target.value as any })}
-                                className="bg-slate-900 border border-slate-700 rounded text-xs text-white"
+                                className="bg-surface border border-border-subtle rounded text-xs text-white"
                              >
                                  <option value="bottom-right">Vpravo dole</option>
                                  <option value="bottom-left">Vlevo dole</option>
@@ -191,7 +191,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                              </select>
                         </div>
                         <div className="space-y-1">
-                             <label className="text-[10px] text-slate-500">Průhlednost</label>
+                             <label className="text-[10px] text-text-secondary">Průhlednost</label>
                              <input type="range" min="10" max="100" value={edits.watermark?.opacity || 50} onChange={(e) => updateWatermark({ opacity: Number(e.target.value) })} className="custom-slider h-1" />
                         </div>
                       </>
@@ -200,29 +200,29 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           )}
       </div>
 
-      <hr className="border-slate-700/50 my-4" />
+      <hr className="border-border-subtle/50 my-4" />
 
       {/* Export Settings inside Manual Edits */}
       <div ref={exportRef} className="space-y-4">
-          <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider">{t.manual_export_settings}</h4>
+          <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">{t.manual_export_settings}</h4>
           <div className="space-y-2">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Smart Presets</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Smart Presets</div>
               <div className="grid grid-cols-3 gap-2">
                   <button
                       onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 80, scale: 1 })}
-                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                      className="px-2 py-2 text-[10px] rounded border border-border-subtle text-text-secondary hover:bg-elevated hover:text-white"
                   >
                       Social
                   </button>
                   <button
                       onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 75, scale: 0.8 })}
-                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                      className="px-2 py-2 text-[10px] rounded border border-border-subtle text-text-secondary hover:bg-elevated hover:text-white"
                   >
                       Web
                   </button>
                   <button
                       onClick={() => onExportOptionsChange({ ...exportOptions, format: 'jpeg', quality: 95, scale: 1 })}
-                      className="px-2 py-2 text-[10px] rounded border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white"
+                      className="px-2 py-2 text-[10px] rounded border border-border-subtle text-text-secondary hover:bg-elevated hover:text-white"
                   >
                       Print
                   </button>
@@ -233,13 +233,13 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           <div className="grid grid-cols-2 gap-2">
               <button 
                   onClick={() => onExportOptionsChange({...exportOptions, format: 'jpeg'})} 
-                  className={`px-3 py-2 text-xs rounded border transition-all ${exportOptions.format === 'jpeg' ? 'bg-cyan-500/20 border-cyan-500 text-white' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs rounded border transition-all ${exportOptions.format === 'jpeg' ? 'bg-accent/20 border-accent text-white' : 'border-border-subtle text-text-secondary hover:bg-elevated'}`}
               >
                   JPEG
               </button>
               <button 
                   onClick={() => onExportOptionsChange({...exportOptions, format: 'png'})} 
-                  className={`px-3 py-2 text-xs rounded border transition-all ${exportOptions.format === 'png' ? 'bg-cyan-500/20 border-cyan-500 text-white' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs rounded border transition-all ${exportOptions.format === 'png' ? 'bg-accent/20 border-accent text-white' : 'border-border-subtle text-text-secondary hover:bg-elevated'}`}
               >
                   PNG
               </button>
@@ -249,8 +249,8 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           {exportOptions.format === 'jpeg' && (
               <div className="space-y-1">
                    <div className="flex justify-between">
-                      <label className="text-xs text-slate-400">{t.export_quality}</label>
-                      <span className="text-xs text-slate-400">{exportOptions.quality}%</span>
+                      <label className="text-xs text-text-secondary">{t.export_quality}</label>
+                      <span className="text-xs text-text-secondary">{exportOptions.quality}%</span>
                    </div>
                    <input
                       type="range" min="1" max="100" value={exportOptions.quality}
@@ -262,7 +262,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
 
           <button 
               onClick={onRequestExport} 
-              className="w-full aurora-glow flex items-center justify-center px-4 py-3 mt-4 border border-transparent text-sm font-bold rounded-lg shadow-lg text-white bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:bg-cyan-600 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full flex items-center justify-center px-4 py-3 mt-4 border border-accent text-sm font-bold text-void bg-accent transition-none"
           >
               <ExportIcon className="w-4 h-4 mr-2" />
               {t.manual_finish}
@@ -273,3 +273,6 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
 };
 
 export default ManualEditControls;
+
+
+

@@ -58,18 +58,18 @@ const CompareSlider: React.FC<CompareSliderProps> = ({ beforeUrl, afterUrl }) =>
                 style={{ clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}
             >
                 <img src={beforeUrl} alt="Before" className="absolute inset-0 w-full h-full object-contain" />
-                <div className="absolute top-4 left-4 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur">PŘED</div>
+                <div className="absolute top-4 left-4 bg-void border border-border-subtle text-text-secondary text-[10px] font-bold uppercase tracking-widest px-2 py-1">PŘED</div>
             </div>
             
-            <div className="absolute top-4 right-4 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur pointer-events-none">PO</div>
+            <div className="absolute top-4 right-4 bg-void border border-border-subtle text-text-secondary text-[10px] font-bold uppercase tracking-widest px-2 py-1 pointer-events-none">PO</div>
 
             {/* Slider Handle */}
             <div 
-                className="absolute top-0 bottom-0 w-1 bg-white cursor-col-resize z-10 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                className="absolute top-0 bottom-0 w-1 bg-accent cursor-col-resize z-10"
                 style={{ left: `${sliderPos}%` }}
             >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-void border border-border-subtle flex items-center justify-center">
+                    <svg className="w-4 h-4 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l-3 3 3 3m8-6l3 3-3 3" />
                     </svg>
                 </div>

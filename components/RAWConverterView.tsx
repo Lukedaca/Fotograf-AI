@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { UploadIcon, ArrowPathIcon, ExportIcon, XCircleIcon } from './icons';
 import Header from './Header';
@@ -113,27 +113,27 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
             <div className="flex-1 flex flex-col items-center p-4 sm:p-8 overflow-y-auto">
                 <div className="w-full max-w-6xl">
                      <div className="text-center mb-10">
-                        <h1 className="text-4xl font-extrabold tracking-tight text-slate-100">{t.raw_title}</h1>
-                        <p className="mt-3 text-xl text-slate-400 max-w-3xl mx-auto">
+                        <h1 className="text-4xl font-extrabold tracking-tight text-text-primary">{t.raw_title}</h1>
+                        <p className="mt-3 text-xl text-text-secondary max-w-3xl mx-auto">
                             {t.raw_subtitle}
                         </p>
                     </div>
 
-                    <div className="bg-slate-900/60 backdrop-blur-xl p-8 rounded-2xl shadow-lg border border-slate-800/50">
+                    <div className="bg-surface p-8 border border-border-subtle">
                     {convertedFiles.length === 0 ? (
                         <div 
                             onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
                             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
                             onDrop={handleDrop}
-                            className={`p-10 border-2 border-dashed rounded-xl transition-colors ${isDragging ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700'}`}
+                            className={`p-10 border-2 border-dashed rounded-xl transition-colors ${isDragging ? 'border-accent bg-accent/10' : 'border-border-subtle'}`}
                         >
                             <div className="text-center">
-                                <UploadIcon className="mx-auto h-12 w-12 text-slate-500" />
-                                <p className="mt-4 font-semibold text-slate-300">
+                                <UploadIcon className="mx-auto h-12 w-12 text-text-secondary" />
+                                <p className="mt-4 font-semibold text-text-primary">
                                     {rawFiles.length > 0 ? `${rawFiles.length} files selected` : t.raw_drag}
                                 </p>
-                                <p className="text-sm text-slate-400">{t.raw_or_click}</p>
+                                <p className="text-sm text-text-secondary">{t.raw_or_click}</p>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -145,7 +145,7 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="mt-4 px-4 py-2 text-sm font-semibold text-cyan-400 rounded-md hover:bg-cyan-500/10 transition-colors"
+                                    className="mt-4 px-4 py-2 text-sm font-semibold text-accent rounded-md hover:bg-accent/10 transition-colors"
                                 >
                                     {rawFiles.length > 0 ? t.raw_select_other : t.upload_btn}
                                 </button>
@@ -156,20 +156,20 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             <h3 className="text-xl font-bold mb-4">{t.raw_done}</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {convertedFiles.map((file) => (
-                                    <div key={file.originalName} className="group relative aspect-square bg-slate-800 rounded-lg overflow-hidden shadow-md border border-slate-700/50">
+                                    <div key={file.originalName} className="group relative aspect-square bg-elevated rounded-lg overflow-hidden shadow-md border border-border-subtle/50">
                                         <img src={file.url} alt={file.originalName} className="w-full h-full object-contain" />
                                         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-                                                <div className="px-2 py-1 bg-black/50 text-slate-300 text-xs rounded backdrop-blur-md flex flex-col items-end">
+                                                <div className="px-2 py-1 bg-void border border-border-subtle text-text-secondary text-xs flex flex-col items-end">
                                                     <span className="opacity-70 text-[10px]">{file.sizeLabel}</span>
                                                 </div>
                                         </div>
                                         
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => downloadFile(file.url, file.originalName)} className="p-3 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-all transform hover:scale-110" title="Download">
+                                            <button onClick={() => downloadFile(file.url, file.originalName)} className="p-3 bg-elevated border border-border-subtle text-text-primary transition-none" title="Stáhnout">
                                                 <ExportIcon className="w-8 h-8" />
                                             </button>
                                         </div>
-                                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-xs text-center text-slate-300 truncate">
+                                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-xs text-center text-text-primary truncate">
                                             {file.originalName}
                                         </div>
                                     </div>
@@ -183,7 +183,7 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             <button
                                 onClick={handleConvert}
                                 disabled={isConverting || rawFiles.length === 0}
-                                className="w-full inline-flex items-center justify-center px-6 py-4 border border-transparent text-lg font-semibold rounded-lg shadow-lg text-white bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:from-cyan-600 hover:to-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:-translate-y-1 active:translate-y-0 aurora-glow"
+                                className="w-full inline-flex items-center justify-center px-6 py-4 border border-accent text-lg font-semibold text-void bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-none"
                             >
                                 <ArrowPathIcon className="mr-3 h-6 w-6" />
                                 {isConverting ? `${t.raw_converting} (${progress.current}/${progress.total})...` : `${t.raw_convert} ${rawFiles.length === 0 ? '' : (rawFiles.length === 1 ? '1' : rawFiles.length)}`}
@@ -192,21 +192,21 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             <div className="flex flex-col sm:flex-row gap-4">
                                     <button
                                     onClick={handleAddToProject}
-                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-lg text-white bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:from-cyan-600 hover:to-fuchsia-700 transition-all aurora-glow"
+                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-accent text-base font-medium text-void bg-accent transition-none"
                                 >
                                     {t.raw_add}
                                 </button>
                                 <button
                                     onClick={() => { setRawFiles([]); setConvertedFiles([]); }}
-                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-slate-700 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-800 hover:bg-slate-700 transition-colors"
+                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium rounded-md shadow-sm text-text-primary bg-elevated hover:bg-elevated transition-colors"
                                 >
                                     {t.raw_convert_more}
                                 </button>
                             </div>
                         )}
                         {isConverting && (
-                            <div className="w-full bg-slate-700 rounded-full h-2.5 mt-4">
-                                <div className="bg-gradient-to-r from-cyan-500 to-fuchsia-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${(progress.current / progress.total) * 100}%` }}></div>
+                            <div className="w-full bg-elevated rounded-full h-2.5 mt-4">
+                                <div className="bg-accent h-2.5 transition-all duration-300" style={{ width: `${(progress.current / progress.total) * 100}%` }}></div>
                             </div>
                         )}
                     </div>
@@ -218,3 +218,6 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
 }
 
 export default RAWConverterView;
+
+
+
