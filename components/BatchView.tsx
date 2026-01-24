@@ -17,7 +17,7 @@ interface BatchViewProps {
   mode?: 'culling' | 'batch';
 }
 
-const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFiles, addNotification, title, onToggleSidebar, mode = 'batch' }) => {
+const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFiles, addNotification, title, onToggleSidebar, onOpenApiKeyModal, mode = 'batch' }) => {
   const { t } = useTranslation();
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set(files.map(f => f.id)));
   const [isProcessing, setIsProcessing] = useState(false);
@@ -100,7 +100,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950">
-      <Header title={mode === 'culling' ? t.pipeline_step_culling : t.nav_batch} onToggleSidebar={onToggleSidebar} />
+      <Header title={mode === 'culling' ? t.pipeline_step_culling : t.nav_batch} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
       <div className="flex-1 w-full flex flex-col items-center p-4 sm:p-8 overflow-y-auto custom-scrollbar">
         <div className="w-full max-w-6xl space-y-8 animate-fade-in">
           

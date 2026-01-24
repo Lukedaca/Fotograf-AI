@@ -11,10 +11,11 @@ interface DashboardViewProps {
   credits: number;
   recentHistory: HistoryEntry[];
   onBuyCredits: () => void;
+  onOpenApiKeyModal?: () => void;
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ 
-  onNavigate, onToggleSidebar, credits, recentHistory, onBuyCredits 
+  onNavigate, onToggleSidebar, credits, recentHistory, onBuyCredits, onOpenApiKeyModal
 }) => {
   const { t } = useTranslation();
 
@@ -25,6 +26,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         onToggleSidebar={onToggleSidebar} 
         credits={credits} 
         onBuyCredits={onBuyCredits}
+        onOpenApiKeyModal={onOpenApiKeyModal}
       />
       
       <div className="p-6 lg:p-12 max-w-7xl mx-auto w-full space-y-12 animate-fade-in">

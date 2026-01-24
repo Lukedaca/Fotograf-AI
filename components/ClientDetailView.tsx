@@ -9,9 +9,10 @@ interface ClientDetailViewProps {
   onToggleSidebar: () => void;
   clientId: string;
   onOpenProject: (id: string) => void;
+  onOpenApiKeyModal?: () => void;
 }
 
-const ClientDetailView: React.FC<ClientDetailViewProps> = ({ title, onToggleSidebar, clientId, onOpenProject }) => {
+const ClientDetailView: React.FC<ClientDetailViewProps> = ({ title, onToggleSidebar, clientId, onOpenProject, onOpenApiKeyModal }) => {
   const { t } = useTranslation();
   const { clients, projects } = useProject();
   const client = clients.find((item) => item.id === clientId);
@@ -19,7 +20,7 @@ const ClientDetailView: React.FC<ClientDetailViewProps> = ({ title, onToggleSide
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
-      <Header title={title} onToggleSidebar={onToggleSidebar} />
+      <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-6xl mx-auto w-full space-y-8 animate-fade-in">
         {!client ? (

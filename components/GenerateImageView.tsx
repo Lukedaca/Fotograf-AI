@@ -67,7 +67,11 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
             const base64Image = await generateImage(prompt);
             setGeneratedImage(`data:image/jpeg;base64,${base64Image}`);
         } catch (err) {
-            setError(getApiErrorMessage(err, t.msg_error));
+            const msg = getApiErrorMessage(err, t.msg_error);
+            if (msg.toLowerCase().includes('api key') || msg.includes('API_KEY_MISSING')) {
+                onOpenApiKeyModal();
+            }
+            setError(msg);
         } finally {
             setIsLoading(false);
         }

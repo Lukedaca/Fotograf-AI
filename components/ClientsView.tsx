@@ -9,9 +9,10 @@ interface ClientsViewProps {
   title: string;
   onToggleSidebar: () => void;
   onOpenClient: (id: string) => void;
+  onOpenApiKeyModal?: () => void;
 }
 
-const ClientsView: React.FC<ClientsViewProps> = ({ title, onToggleSidebar, onOpenClient }) => {
+const ClientsView: React.FC<ClientsViewProps> = ({ title, onToggleSidebar, onOpenClient, onOpenApiKeyModal }) => {
   const { t } = useTranslation();
   const { clients, projects, addClient } = useProject();
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -25,7 +26,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ title, onToggleSidebar, onOpe
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
-      <Header title={title} onToggleSidebar={onToggleSidebar} />
+      <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-7xl mx-auto w-full space-y-8 animate-fade-in">
         <div className="flex flex-wrap items-center justify-between gap-4">

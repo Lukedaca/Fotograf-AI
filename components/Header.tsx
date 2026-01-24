@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MenuIcon, SparklesIcon } from './icons';
+import { KeyIcon, MenuIcon, SparklesIcon } from './icons';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface HeaderProps {
@@ -8,9 +8,10 @@ interface HeaderProps {
   onToggleSidebar: () => void;
   credits?: number;
   onBuyCredits?: () => void;
+  onOpenApiKeyModal?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyCredits }) => {
+const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyCredits, onOpenApiKeyModal }) => {
   const { language, setLanguage, t } = useTranslation();
 
   return (
@@ -31,6 +32,17 @@ const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyC
 
       {/* Right side actions */}
       <div className="flex items-center space-x-3 sm:space-x-4">
+
+        {onOpenApiKeyModal && (
+            <button
+                onClick={onOpenApiKeyModal}
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-full border border-slate-700/50 hover:bg-slate-700 transition-all"
+                title="API Key"
+            >
+                <KeyIcon className="w-4 h-4 text-cyan-400" />
+                <span className="text-[10px] font-bold text-slate-200">API</span>
+            </button>
+        )}
         
         {/* Credits Display */}
         {credits !== undefined && (

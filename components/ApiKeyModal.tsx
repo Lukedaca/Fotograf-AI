@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { KeyIcon, XIcon } from './icons';
 import { useTranslation } from '../contexts/LanguageContext';
+import { clearApiKey, getApiKey, setApiKey } from '../utils/apiKey';
 
 interface ApiKeyModalProps {
     isOpen: boolean;
@@ -9,16 +10,19 @@ interface ApiKeyModalProps {
 
 const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const storedKey = useMemo(() => getApiKey(), [isOpen]);
 
-  const handleSelectKey = async () => {
-      if (window.aistudio) {
-          try {
-            await window.aistudio.openSelectKey();
-            onClose();
-          } catch (error) {
-            console.error(error);
-          }
-      }
+  const handleSave = () => {
+      if (!apiKeyInput.trim()) return;
+      setApiKey(apiKeyInput);
+      setApiKeyInput('');
+      onClose();
+  };
+
+  const handleClear = () => {
+      clearApiKey();
+      setApiKeyInput('');
   };
 
   if (!isOpen) return null;
@@ -45,16 +49,39 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-                    Access to premium models requires a valid API key from Google AI Studio.
+                    Zadejte API klíč pro Google Gemini. Uloží se lokálně v prohlížeči.
                 </p>
 
                 <div className="space-y-4">
-                    <button 
-                        onClick={handleSelectKey}
+                    <div className="space-y-2">
+                        <label className="block text-xs text-slate-400">API Key</label>
+                        <input
+                            type="password"
+                            value={apiKeyInput}
+                            onChange={(e) => setApiKeyInput(e.target.value)}
+                            placeholder="AIza..."
+                            className="w-full rounded-xl bg-slate-950 border border-slate-800 px-4 py-3 text-sm text-white focus:ring-2 focus:ring-cyan-500 outline-none"
+                        />
+                        {storedKey && (
+                            <p className="text-[11px] text-emerald-400">Uložený klíč: ••••••••{storedKey.slice(-4)}</p>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleSave}
                         className="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-500 to-fuchsia-600 hover:from-cyan-600 hover:to-fuchsia-700 transition-all transform hover:-translate-y-0.5 shadow-lg aurora-glow"
                     >
-                        Select API Key
+                        Uložit API klíč
                     </button>
+
+                    {storedKey && (
+                        <button
+                            onClick={handleClear}
+                            className="w-full py-2 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all"
+                        >
+                            Odebrat uložený klíč
+                        </button>
+                    )}
 
                     <div className="mt-6 text-center text-xs text-slate-500">
                         <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">Billing Information</a>

@@ -12,6 +12,7 @@ interface ProjectsViewProps {
   onToggleSidebar: () => void;
   onOpenProject: (id: string) => void;
   onStartUploadForProject: (id: string) => void;
+  onOpenApiKeyModal?: () => void;
 }
 
 const statusFilters = [
@@ -22,7 +23,7 @@ const statusFilters = [
   { id: 'delivered', labelKey: 'status_delivered' },
 ] as const;
 
-const ProjectsView: React.FC<ProjectsViewProps> = ({ title, onToggleSidebar, onOpenProject, onStartUploadForProject }) => {
+const ProjectsView: React.FC<ProjectsViewProps> = ({ title, onToggleSidebar, onOpenProject, onStartUploadForProject, onOpenApiKeyModal }) => {
   const { t } = useTranslation();
   const { projects, clients, addProject, addClient } = useProject();
   const [filter, setFilter] = useState<'all' | ProjectStatus>('all');
@@ -36,7 +37,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ title, onToggleSidebar, onO
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
-      <Header title={title} onToggleSidebar={onToggleSidebar} />
+      <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-7xl mx-auto w-full space-y-8 animate-fade-in">
         <div className="flex flex-wrap items-center justify-between gap-4">

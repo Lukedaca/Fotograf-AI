@@ -56,7 +56,7 @@ const INITIAL_EDITS: ManualEdits = {
 };
 
 const EditorView: React.FC<EditorViewProps> = (props) => {
-  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate } = props;
+  const { files, activeFileId, onSetFiles, onSetActiveFileId, activeAction, addNotification, language, credits, onDeductCredits, history, onUndo, onRedo, onNavigate, onOpenApiKeyModal } = props;
   const { t: trans } = useTranslation();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -227,7 +227,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         const url = createTrackedUrl(newFile);
         onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
         addNotification(trans.msg_success, 'info');
-    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    }
     finally { setIsLoading(false); }
   };
 
@@ -245,7 +251,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         document.body.removeChild(link);
         revokeTrackedUrl(url);
         addNotification(trans.msg_success, 'info');
-    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    } catch (e) {
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    }
     finally { setIsLoading(false); }
   };
 

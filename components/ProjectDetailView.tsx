@@ -14,6 +14,7 @@ interface ProjectDetailViewProps {
   onStartUpload: () => void;
   onOpenEditor: (fileId: string) => void;
   onOpenGalleryPreview: () => void;
+  onOpenApiKeyModal?: () => void;
 }
 
 const tabs = ['info', 'photos', 'gallery', 'activity'] as const;
@@ -25,6 +26,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   onStartUpload,
   onOpenEditor,
   onOpenGalleryPreview,
+  onOpenApiKeyModal,
 }) => {
   const { t } = useTranslation();
   const { clients, projects, updateProject } = useProject();
@@ -38,7 +40,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   if (!project) {
     return (
       <div className="w-full h-full flex flex-col bg-slate-950">
-        <Header title={title} onToggleSidebar={onToggleSidebar} />
+        <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
         <div className="flex-1 flex items-center justify-center text-slate-500">
           {t.crm_project_missing}
         </div>
@@ -105,7 +107,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-950 overflow-y-auto custom-scrollbar">
-      <Header title={title} onToggleSidebar={onToggleSidebar} />
+      <Header title={title} onToggleSidebar={onToggleSidebar} onOpenApiKeyModal={onOpenApiKeyModal} />
 
       <div className="p-6 lg:p-12 max-w-6xl mx-auto w-full space-y-8 animate-fade-in">
         <div className="flex flex-wrap items-center justify-between gap-4">

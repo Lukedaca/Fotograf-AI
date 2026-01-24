@@ -1,19 +1,19 @@
 
-import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useReducer, useRef, Suspense, lazy } from 'react';
 
-// Views
-import HomeView from './components/HomeView';
-import DashboardView from './components/DashboardView';
-import UploadView from './components/UploadView';
-import EditorView from './components/EditorView';
-import BatchView from './components/BatchView';
-import GenerateImageView from './components/GenerateImageView';
-import RAWConverterView from './components/RAWConverterView';
-import ProjectsView from './components/ProjectsView';
-import ProjectDetailView from './components/ProjectDetailView';
-import ClientsView from './components/ClientsView';
-import ClientDetailView from './components/ClientDetailView';
-import GalleryPreviewView from './components/GalleryPreviewView';
+// Views (lazy-loaded for faster initial startup)
+const HomeView = lazy(() => import('./components/HomeView'));
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const UploadView = lazy(() => import('./components/UploadView'));
+const EditorView = lazy(() => import('./components/EditorView'));
+const BatchView = lazy(() => import('./components/BatchView'));
+const GenerateImageView = lazy(() => import('./components/GenerateImageView'));
+const RAWConverterView = lazy(() => import('./components/RAWConverterView'));
+const ProjectsView = lazy(() => import('./components/ProjectsView'));
+const ProjectDetailView = lazy(() => import('./components/ProjectDetailView'));
+const ClientsView = lazy(() => import('./components/ClientsView'));
+const ClientDetailView = lazy(() => import('./components/ClientDetailView'));
+const GalleryPreviewView = lazy(() => import('./components/GalleryPreviewView'));
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -21,6 +21,7 @@ import OnboardingModal from './components/OnboardingModal';
 import CreditPurchaseModal from './components/CreditPurchaseModal';
 import JobTemplateModal from './components/JobTemplateModal';
 import WorkflowStepper from './components/WorkflowStepper';
+import ApiKeyModal from './components/ApiKeyModal';
 import { XCircleIcon } from './components/icons';
 
 // Types
@@ -104,6 +105,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [currentJobTemplate, setCurrentJobTemplate] = useState<JobTemplate>('none');
   const [currentClientId, setCurrentClientId] = useState<string | null>(null);
   const [galleryProjectId, setGalleryProjectId] = useState<string | null>(null);
@@ -418,6 +420,7 @@ function App() {
         onToggleSidebar: handleToggleSidebar,
         credits: isAdmin ? 9999 : credits,
         onBuyCredits: () => setShowPurchaseModal(true),
+        onOpenApiKeyModal: () => setShowApiKeyModal(true),
     };
 
     const stepper = <WorkflowStepper currentStep={getPipelineStep()} />;
@@ -445,7 +448,7 @@ function App() {
       case 'editor':
         return (
           <div className="flex-1 flex flex-col h-full">
-            <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />
+            <EditorView {...headerProps} files={files} activeFileId={activeFileId} onSetFiles={setFiles} onSetActiveFileId={setActiveFileId} activeAction={activeAction} addNotification={addNotification} userPresets={userPresets} onPresetsChange={setUserPresets} history={history} onUndo={() => dispatchHistory({type: 'UNDO'})} onRedo={() => dispatchHistory({type: 'REDO'})} onNavigate={handleNavigate} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} />
             {stepper}
           </div>
         );
@@ -457,7 +460,7 @@ function App() {
           </div>
         );
       case 'generate':
-        return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => {}} credits={credits} onDeductCredits={handleDeductCredits} />;
+        return <GenerateImageView {...headerProps} onImageGenerated={handleImageGenerated} onOpenApiKeyModal={() => setShowApiKeyModal(true)} credits={credits} onDeductCredits={handleDeductCredits} />;
       case 'raw-converter':
         return <RAWConverterView {...headerProps} addNotification={addNotification} onFilesConverted={handleRawFilesConverted} />;
       case 'projects':
@@ -473,6 +476,7 @@ function App() {
               }
               handleNavigate({ view: 'upload' });
             }}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         );
       case 'project-detail':
@@ -487,6 +491,7 @@ function App() {
               setView('editor');
             }}
             onOpenGalleryPreview={() => handleNavigate({ view: 'gallery-preview', id: currentProject.id })}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         ) : (
           <ProjectsView
@@ -500,6 +505,7 @@ function App() {
               }
               handleNavigate({ view: 'upload' });
             }}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         );
       case 'clients':
@@ -508,6 +514,7 @@ function App() {
             title={getPageTitle()}
             onToggleSidebar={handleToggleSidebar}
             onOpenClient={(id) => handleNavigate({ view: 'client-detail', id })}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         );
       case 'client-detail':
@@ -517,12 +524,14 @@ function App() {
             onToggleSidebar={handleToggleSidebar}
             clientId={currentClientId}
             onOpenProject={(id) => handleNavigate({ view: 'project-detail', id })}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         ) : (
           <ClientsView
             title={getPageTitle()}
             onToggleSidebar={handleToggleSidebar}
             onOpenClient={(id) => handleNavigate({ view: 'client-detail', id })}
+            onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />
         );
       default:
@@ -531,11 +540,19 @@ function App() {
   };
 
   if (view === 'gallery-preview' && galleryProjectId) {
-    return <GalleryPreviewView projectId={galleryProjectId} />;
+    return (
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400">Načítání...</div>}>
+        <GalleryPreviewView projectId={galleryProjectId} />
+      </Suspense>
+    );
   }
 
   if (view === 'home') {
-    return <HomeView onEnterApp={() => setView('dashboard')} />;
+    return (
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400">Načítání...</div>}>
+        <HomeView onEnterApp={() => setView('dashboard')} />
+      </Suspense>
+    );
   }
 
   return (
@@ -550,7 +567,9 @@ function App() {
             activeAction={activeAction}
         />
         <main className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`}>
-            {renderView()}
+            <Suspense fallback={<div className="flex-1 flex items-center justify-center text-slate-400">Načítání...</div>}>
+              {renderView()}
+            </Suspense>
         </main>
         
         {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
@@ -567,6 +586,8 @@ function App() {
             onClose={() => setShowTemplateModal(false)} 
           />
         )}
+
+        <ApiKeyModal isOpen={showApiKeyModal} onClose={() => setShowApiKeyModal(false)} />
         
         <div className="fixed top-5 right-5 z-[250] w-full max-w-sm space-y-3">
             {notifications.map(n => (

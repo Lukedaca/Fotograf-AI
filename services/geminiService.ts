@@ -2,6 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { AnalysisResult, Language, QualityAssessment } from '../types';
 import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
+import { getApiKey } from '../utils/apiKey';
 
 function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
     if (!text) {
@@ -102,7 +103,7 @@ function getInlineImageData(response: any) {
  * where the key is never exposed to the client bundle.
  */
 const getGenAI = () => {
-    const apiKey = process.env.API_KEY;
+    const apiKey = getApiKey() || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY;
     
     if (!apiKey) {
         console.error("API Key is missing in environment variables.");
