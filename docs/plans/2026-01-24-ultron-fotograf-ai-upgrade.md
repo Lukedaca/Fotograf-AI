@@ -63,112 +63,413 @@ async function analyzeForAutoCrop(imageBase64: string): Promise<AutoCropResult> 
 
 ---
 
-## ČÁST 2: DESIGN REVOLUTION - "PURE VISION 2.0"
+## ČÁST 2: DESIGN REVOLUTION - "BRUTALIST PHOTO LAB"
 
-### 2.1 Problémy současného designu
-- Generický dark theme (slate-950) - jako 90% AI aplikací
-- Nudné gradienty (cyan/fuchsia) - typický "AI look"
-- Statický layout - žádná dynamika
-- Přeplněné UI - příliš mnoho tlačítek viditelných najednou
+### 2.1 KRITICKÉ: Současný design je STÁLE generický!
+Screenshot analýza ukazuje:
+- ❌ Stále slate-950 pozadí
+- ❌ Stále cyan/orange gradienty (typický "AI startup" look)
+- ❌ Stále rounded corners všude
+- ❌ Stále nudný sidebar layout
+- ❌ Vypadá jako KAŽDÁ DRUHÁ AI aplikace
 
-### 2.2 Nový design koncept: "DARKROOM CINEMA"
+### 2.2 RADIKÁLNÍ změna: "BRUTALIST PHOTO LAB"
 
-Inspirace: Profesionální filmové color grading suite (DaVinci Resolve meets Apple Photos meets Lightroom)
+**ZAKÁZANÉ prvky (ODSTRAŇ Z CELÉ APLIKACE):**
+- ❌ Gradient backgrounds (žádné from-cyan-to-purple)
+- ❌ Rounded-xl/2xl/3xl (max rounded-sm nebo nic)
+- ❌ Glassmorphism/backdrop-blur
+- ❌ Slate barvy (slate-900, slate-950)
+- ❌ Neon/glow efekty
+- ❌ Soft shadows
 
-#### 2.2.1 Barevná paleta
+**POVINNÉ prvky (NOVÝ VIZUÁLNÍ JAZYK):**
 
-```css
-/* Opuštění generického slate pro SKUTEČNOU tmavou */
---bg-void: #0a0a0b;          /* Absolutní čerň */
---bg-surface: #111113;       /* Karty/panely */
---bg-elevated: #1a1a1d;      /* Hover/selected */
---accent-primary: #ff6b35;   /* Teplá oranžová - energie */
---accent-secondary: #00d4aa; /* Chladná tyrkysová - preciznost */
---accent-warning: #ffd23f;   /* Zlatá - upozornění */
---text-primary: #fafafa;
---text-secondary: #888888;
---border-subtle: #2a2a2d;
-```
-
-#### 2.2.2 Typografie
+#### A) Barevná paleta - KONTRASTNÍ & ODVÁŽNÁ
 
 ```css
-/* Headings: Clash Display (geometrický, moderní) */
-/* Body: Inter (čitelný, profesionální) */
-/* Monospace: JetBrains Mono (pro technické údaje) */
+/* tailwind.config.cjs - KOMPLETNĚ PŘEPSAT */
+colors: {
+  // Pozadí - čistá čerň, ne slate
+  void: '#000000',
+  surface: '#0d0d0d',
+  elevated: '#1a1a1a',
 
-.hero-title {
-  font-family: 'Clash Display', sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  // Primární akcent - VÝRAZNÁ ČERVENÁ (ne oranžová!)
+  accent: {
+    DEFAULT: '#FF0040',  // Neon červená
+    hover: '#FF3366',
+    muted: '#990033',
+  },
+
+  // Sekundární - ČISTÁ BÍLÁ pro kontrast
+  white: '#FFFFFF',
+  gray: {
+    100: '#F5F5F5',
+    400: '#9CA3AF',
+    600: '#4B5563',
+    800: '#1F1F1F',
+  },
+
+  // Funkční barvy
+  success: '#00FF88',
+  warning: '#FFCC00',
+  error: '#FF0040',
 }
 ```
 
-#### 2.2.3 Klíčové design prvky
+#### B) Typografie - BRUTALISTICKÁ
 
-**A) "Floating Panels" místo sidebar**
+```css
+/* Headings: Space Grotesk (brutalist, industrial) */
+/* Body: IBM Plex Mono (technický, profesionální) */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+.heading {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.body {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+}
 ```
-┌─────────────────────────────────────────────────────┐
-│  [Logo]                              [Export] [AI]  │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│     ┌─────────────────────────────────┐            │
-│     │                                 │            │
-│     │        HLAVNÍ CANVAS            │   ┌─────┐  │
-│     │        (maximální prostor)      │   │ AI  │  │
-│     │                                 │   │Panel│  │
-│     └─────────────────────────────────┘   └─────┘  │
-│                                                     │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐              │
-│  │Crop  │ │Light │ │Color │ │Detail│  ← Dock      │
-│  └──────┘ └──────┘ └──────┘ └──────┘              │
-└─────────────────────────────────────────────────────┘
+
+#### C) Layout - ASYMETRICKÝ GRID
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ FOTOGRAF AI                          [API] [EXPORT] [■■■]  │
+│ ════════════════════════════════════════════════════════════│
+│                                                             │
+│  ┌───────────────────────────────────────┐  ┌────────────┐ │
+│  │                                       │  │ AI CONTROL │ │
+│  │                                       │  ├────────────┤ │
+│  │            CANVAS                     │  │ ▶ AUTO     │ │
+│  │            100%                       │  │ ▷ PORTRAIT │ │
+│  │                                       │  │ ▷ LANDSCAPE│ │
+│  │                                       │  │ ▷ PRODUCT  │ │
+│  └───────────────────────────────────────┘  │            │ │
+│                                             │ ────────── │ │
+│  ┌─────┬─────┬─────┬─────┬─────┬─────┐    │ ANALYSIS   │ │
+│  │CROP │LIGHT│COLOR│SHARP│ FX  │ AI  │    │ Exp: +0.5  │ │
+│  └─────┴─────┴─────┴─────┴─────┴─────┘    │ Sat: OK    │ │
+│                                             └────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**B) Kontextové ovládání**
-- Nástroje se objevují až když jsou relevantní
-- Hover nad obrázkem → subtle toolbar
-- Klik na oblast → kontextové menu pro tu oblast
+#### D) Komponenty - OSTRÉ HRANY, SILNÉ LINIE
 
-**C) Micro-interactions & Motion**
-- Smooth spring animations (framer-motion)
-- Parallax efekt při scrollu
-- Magnetic buttons (přitahují kurzor)
-- Ripple effects na akcích
+```tsx
+// PŘED (generické)
+<div className="bg-slate-900 rounded-2xl p-6 shadow-lg">
 
-**D) "Focus Mode"**
-- Dvojklik na obrázek = fullscreen editace
-- Vše ostatní zmizí, jen canvas + floating tools
-- ESC = zpět do normálního režimu
+// PO (brutalist)
+<div className="bg-surface border-l-4 border-accent p-4">
+```
 
-### 2.3 Nové komponenty
+```tsx
+// PŘED (soft button)
+<button className="bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full px-6 py-3">
 
-| Komponenta | Popis |
-|------------|-------|
-| `FloatingDock` | Spodní panel s nástroji (macOS dock styl) |
-| `ContextualToolbar` | Toolbar který se objeví při hoveru |
-| `MagneticButton` | Tlačítko s magnetickým efektem |
-| `RadialMenu` | Kruhové menu na pravý klik |
-| `GlowCard` | Karta s animated glow efektem |
-| `CinematicLoader` | Loader jako filmový countdown |
-| `ParallaxContainer` | Wrapper pro parallax efekty |
+// PO (brutalist button)
+<button className="bg-accent text-black font-mono uppercase tracking-wider px-6 py-2 hover:bg-white hover:text-black transition-none">
+```
 
-### 2.4 Úkoly
-| ID | Úkol | Priorita |
-|----|------|----------|
-| DS-1 | Vytvořit novou barevnou paletu v tailwind.config | P0 |
-| DS-2 | Implementovat FloatingDock komponentu | P0 |
-| DS-3 | Přepracovat EditorView layout na maximální canvas | P0 |
-| DS-4 | Přidat framer-motion pro animace | P1 |
-| DS-5 | Implementovat RadialMenu (pravý klik) | P1 |
-| DS-6 | Focus Mode s fullscreen editací | P1 |
-| DS-7 | Magnetic buttons s hover efekty | P2 |
-| DS-8 | Nové fonty (Clash Display + Inter) | P1 |
-| DS-9 | CinematicLoader pro AI operace | P2 |
+#### E) Specifické změny v komponentách
+
+**Dashboard cards:**
+```tsx
+// PŘED
+<div className="bg-gradient-to-br from-cyan-500/20 to-purple-500/20 rounded-2xl">
+
+// PO - čistý border design
+<div className="bg-void border border-gray-800 hover:border-accent">
+  <div className="border-b border-gray-800 px-4 py-2">
+    <span className="text-accent font-mono text-xs uppercase">Pipeline</span>
+  </div>
+  <div className="p-4">
+    <h3 className="text-white font-bold text-xl uppercase tracking-wide">
+      Nová zakázka
+    </h3>
+  </div>
+</div>
+```
+
+**Sidebar:**
+```tsx
+// PŘED - rounded icons, soft hover
+// PO - brutalist menu
+<nav className="border-r border-gray-800 w-48">
+  <a className="block px-4 py-3 border-l-4 border-transparent hover:border-accent hover:bg-gray-800/50 font-mono text-sm uppercase">
+    AI Command
+  </a>
+</nav>
+```
+
+**Buttons:**
+```tsx
+// Primary button
+<button className="bg-accent text-black px-6 py-2 font-mono uppercase text-sm tracking-wider hover:bg-white">
+  Spustit
+</button>
+
+// Secondary button
+<button className="border border-gray-600 text-white px-6 py-2 font-mono uppercase text-sm tracking-wider hover:border-accent hover:text-accent">
+  Zrušit
+</button>
+```
+
+### 2.3 Soubory k úpravě
+
+| Soubor | Co změnit |
+|--------|-----------|
+| `tailwind.config.cjs` | Kompletně přepsat colors, odstranit slate |
+| `styles.css` | Přidat fonty, globální reset rounded |
+| `index.html` | Přidat Google Fonts link |
+| `components/Sidebar.tsx` | Border-l design místo rounded icons |
+| `components/Header.tsx` | Uppercase logo, brutalist nav |
+| `views/DashboardView.tsx` | Border cards místo gradient cards |
+| `views/EditorView.tsx` | Asymetrický layout, ostré panely |
+| `views/AICommandCenter.tsx` | Industrial look, monospace text |
+| `components/Button.tsx` | Vytvořit novou komponentu |
+
+### 2.4 Vizuální reference
+
+Inspirace:
+- **Stripe Dashboard** - čisté, funkční
+- **Linear App** - minimalistické, ostré
+- **Vercel** - černobílé s akcenty
+- **Teenage Engineering** - brutalist industrial
+
+NENÍ inspirace:
+- ~~Figma~~ (příliš soft)
+- ~~Notion~~ (příliš rounded)
+- ~~Typical AI SaaS~~ (gradient hell)
+
+### 2.5 Úkoly - DESIGN
+| ID | Úkol | Priorita | Detail |
+|----|------|----------|--------|
+| DS-1 | Přepsat tailwind.config.cjs | P0 | Nové barvy, odstranit slate, přidat void/surface/accent |
+| DS-2 | Přidat fonty Space Grotesk + IBM Plex Mono | P0 | Google Fonts v index.html |
+| DS-3 | Globální CSS reset | P0 | Odstranit všechny rounded-xl/2xl, shadows |
+| DS-4 | Přepracovat Sidebar.tsx | P0 | Border-l hover, uppercase, monospace |
+| DS-5 | Přepracovat DashboardView.tsx | P0 | Border cards, ne gradient cards |
+| DS-6 | Přepracovat Header.tsx | P0 | Brutalist nav, uppercase logo |
+| DS-7 | Vytvořit Button.tsx komponentu | P0 | Primary/secondary/ghost varianty |
+| DS-8 | Přepracovat AICommandCenter.tsx | P0 | Industrial panel design |
+| DS-9 | Přepracovat EditorView.tsx | P1 | Asymetrický layout |
+| DS-10 | Odstranit VŠECHNY gradienty | P0 | Grep "gradient" a nahradit |
+| DS-11 | Odstranit VŠECHNY blur efekty | P0 | Grep "blur" a nahradit |
 
 ---
 
-## ČÁST 3: AI AUTOPILOT - SAMOSTATNÁ SEKCE
+## ČÁST 3: OPRAVA TEXTŮ - ENCODING & LOKALIZACE
+
+### 3.1 KRITICKÝ BUG: Encoding problém
+
+Screenshot ukazuje rozbitý text:
+```
+ŠPATNĚ: "â€¢ ZvÄ Ĺ¨it kontrast pro dramatiÄŤtÄ›jÅ¡Ă dojem"
+SPRÁVNĚ: "• Zvýšit kontrast pro dramatičtější dojem"
+
+ŠPATNĚ: "â€¢ OĹ™Äznout pro rule of thirds kompozici"
+SPRÁVNĚ: "• Oříznout pro rule of thirds kompozici"
+
+ŠPATNĚ: "â€¢ PĹ™idat vignette pro focus na subjekt"
+SPRÁVNĚ: "• Přidat vignette pro focus na subjekt"
+```
+
+### 3.2 Příčina problému
+
+Texty z Gemini API přichází v UTF-8, ale někde se špatně dekódují (pravděpodobně double-encoding nebo špatný charset).
+
+**Možné příčiny:**
+1. Gemini vrací UTF-8 ale response se parsuje jako Latin-1
+2. JSON.parse bez správného encoding
+3. Chybí `<meta charset="UTF-8">` v HTML
+4. LocalStorage ukládá/načítá špatně
+
+### 3.3 Oprava encoding
+
+```typescript
+// services/geminiService.ts
+
+// PŘED
+const text = response.text();
+
+// PO - zajistit správné dekódování
+const text = new TextDecoder('utf-8').decode(
+  new TextEncoder().encode(response.text())
+);
+
+// Nebo sanitizace při zobrazení
+function sanitizeText(text: string): string {
+  // Fix common encoding issues
+  return text
+    .replace(/â€¢/g, '•')
+    .replace(/Ä›/g, 'ě')
+    .replace(/Å¡/g, 'š')
+    .replace(/Ä/g, 'č')
+    .replace(/Å™/g, 'ř')
+    .replace(/Ĺ¨/g, 'ý')
+    .replace(/Ă/g, 'í');
+}
+```
+
+### 3.4 Konzistence jazyků
+
+**Problém:** Míchání angličtiny a češtiny
+```
+ŠPATNĚ: "Side-by-side preview and AI analysis."
+SPRÁVNĚ: "Náhled vedle sebe a AI analýza."
+
+ŠPATNĚ: "SOURCE FILE" + "No files available"
+SPRÁVNĚ: "ZDROJOVÝ SOUBOR" + "Žádné soubory"
+
+ŠPATNĚ: "ENHANCEMENT MODES" + "Auto" + "Portrait"
+SPRÁVNĚ: "REŽIMY VYLEPŠENÍ" + "Auto" + "Portrét"
+```
+
+### 3.5 Lokalizační soubor - AKTUALIZOVAT
+
+```typescript
+// contexts/LanguageContext.tsx nebo utils/translations.ts
+
+const cs = {
+  // AI Command Center
+  aiCommandCenter: {
+    title: 'AI Řídicí Centrum',
+    subtitle: 'Náhled vedle sebe a AI analýza',
+    status: 'Stav',
+    foundation: 'Základ',
+    sourceFile: 'Zdrojový soubor',
+    noFiles: 'Žádné soubory k dispozici',
+    original: 'Originál',
+    aiEnhanced: 'AI Vylepšeno',
+  },
+
+  // Enhancement modes
+  enhancementModes: {
+    title: 'Režimy vylepšení',
+    auto: 'Automatický',
+    portrait: 'Portrét',
+    landscape: 'Krajina',
+    product: 'Produkt',
+    food: 'Jídlo',
+    realEstate: 'Reality',
+    socialMedia: 'Sociální sítě',
+    cinematic: 'Filmový',
+    yourStyle: 'Tvůj styl',
+  },
+
+  // AI Analysis
+  aiAnalysis: {
+    title: 'AI Analýza',
+    exposure: 'Expozice',
+    colors: 'Barvy',
+    composition: 'Kompozice',
+    sharpness: 'Ostrost',
+    waiting: 'Čekám na analýzu...',
+  },
+
+  // AI Suggestions - tyto přichází z Gemini, musí být správně enkódované!
+  aiSuggestions: {
+    title: 'AI Návrhy',
+    increaseContrast: 'Zvýšit kontrast pro dramatičtější dojem',
+    cropRuleOfThirds: 'Oříznout pro rule of thirds kompozici',
+    addVignette: 'Přidat vinětu pro zaměření na subjekt',
+  },
+
+  // Buttons
+  buttons: {
+    startAutopilot: 'Spustit Autopilot',
+    applyAll: 'Aplikovat vše',
+    selectIndividual: 'Vybrat jednotlivě',
+    customize: 'Upravit',
+    export: 'Exportovat',
+    cancel: 'Zrušit',
+  },
+
+  // Dashboard
+  dashboard: {
+    title: 'Přehled',
+    newOrder: 'Nová zakázka',
+    continueEditing: 'Pokračovat v úpravách',
+    quickActions: 'Rychlé akce',
+    recentActions: 'Poslední akce',
+    noHistory: 'Zatím žádná historie.',
+    smartCulling: 'Chytrý výběr',
+    flashAutopilot: 'Bleskový Autopilot',
+    startPipeline: 'Spustit Pipeline',
+    openStudio: 'Otevřít Studio',
+  },
+
+  // Sidebar
+  sidebar: {
+    export: 'Export',
+    creative: 'Kreativa',
+    aiCommandCenter: 'AI Centrum',
+    youtubeThumbnails: 'YouTube Miniatury',
+    socialMedia: 'Sociální sítě',
+    video: 'Video (Veo)',
+    generate: 'Generovat',
+    style: 'Styl',
+    management: 'Správa',
+    aiGallery: 'AI Galerie',
+    presets: 'Presety',
+    history: 'Historie',
+    rawConverter: 'RAW Konvertor',
+  },
+
+  // Common
+  common: {
+    price: 'Cena',
+    credits: 'kredity',
+  },
+};
+```
+
+### 3.6 Gemini prompt úprava
+
+```typescript
+// Přidat do všech Gemini promptů pro české odpovědi
+const systemPrompt = `
+IMPORTANT: Always respond in Czech language (čeština).
+Use proper Czech characters: á, č, ď, é, ě, í, ň, ó, ř, š, ť, ú, ů, ý, ž
+Never use broken encoding like "Ä›" or "Å¡".
+`;
+
+// Příklad pro suggestions
+const suggestionsPrompt = `
+${systemPrompt}
+Analyzuj tento obrázek a navrhni 3-5 vylepšení.
+Odpověz v češtině, krátké věty, bez číslování.
+Příklad formátu:
+- Zvýšit kontrast pro dramatičtější dojem
+- Oříznout pro lepší kompozici
+`;
+```
+
+### 3.7 Úkoly - TEXTY & ENCODING
+| ID | Úkol | Priorita | Detail |
+|----|------|----------|--------|
+| TXT-1 | Opravit encoding v geminiService.ts | P0 | TextDecoder UTF-8 |
+| TXT-2 | Aktualizovat LanguageContext.tsx | P0 | Kompletní české překlady |
+| TXT-3 | Přidat sanitizeText() utility | P0 | Fallback pro broken chars |
+| TXT-4 | Ověřit `<meta charset="UTF-8">` | P0 | V index.html |
+| TXT-5 | Upravit Gemini prompty | P1 | Přidat Czech language instruction |
+| TXT-6 | Projít VŠECHNY komponenty | P1 | Nahradit hardcoded EN texty |
+| TXT-7 | AICommandCenter.tsx lokalizace | P0 | Všechny texty česky |
+| TXT-8 | DashboardView.tsx lokalizace | P0 | Všechny texty česky |
+
+---
+
+## ČÁST 4: AI AUTOPILOT - SAMOSTATNÁ SEKCE
 
 ### 3.1 Koncept: "AI Command Center"
 
@@ -299,7 +600,7 @@ async function runAutopilot(
 
 ---
 
-## ČÁST 4: DALŠÍ INOVACE - "WOW FAKTORY"
+## ČÁST 5: DALŠÍ INOVACE - "WOW FAKTORY"
 
 ### 4.1 Voice Commands (Hlasové ovládání)
 ```
@@ -370,21 +671,23 @@ async function runAutopilot(
 
 ---
 
-## ČÁST 5: IMPLEMENTAČNÍ PLÁN
+## ČÁST 6: IMPLEMENTAČNÍ PLÁN
 
 ### Fáze 1: FOUNDATION (Týden 1-2)
-**Cíl**: Opravit kritické chyby a položit základy
+**Cíl**: Opravit kritické chyby, RADIKÁLNÍ design změna, oprava textů
 
 | Úkol | Popis | Est. |
 |------|-------|------|
+| TXT-1, TXT-4 | Opravit encoding (UTF-8), meta charset | 1h |
+| TXT-2, TXT-7, TXT-8 | České překlady pro AICommandCenter + Dashboard | 3h |
+| DS-1 | PŘEPSAT tailwind.config - nové barvy (void, accent red) | 2h |
+| DS-2 | Přidat fonty Space Grotesk + IBM Plex Mono | 1h |
+| DS-3, DS-10, DS-11 | Odstranit VŠECHNY gradienty a blur efekty | 2h |
+| DS-4, DS-5 | Přepracovat Sidebar + Dashboard (brutalist) | 4h |
 | SEC-1, SEC-2 | API Key manager + fix delete button | 2h |
-| SEC-3, SEC-6 | Session-only option + security notice | 2h |
 | AC-1, AC-2, AC-3 | Autocrop implementace | 4h |
-| DS-1 | Nová barevná paleta | 2h |
-| DS-8 | Nové fonty | 1h |
-| AP-1 | AICommandCenter základní view | 3h |
 
-**Deliverable**: Fungující autocrop, bezpečná správa API klíče, nové barvy/fonty
+**Deliverable**: Fungující autocrop, ÚPLNĚ NOVÝ brutalist design, české texty bez encoding chyb
 
 ### Fáze 2: AI COMMAND CENTER (Týden 3-4)
 **Cíl**: Kompletní AI Autopilot sekce
@@ -398,18 +701,18 @@ async function runAutopilot(
 
 **Deliverable**: Plně funkční AI Command Center
 
-### Fáze 3: DESIGN REVOLUTION (Týden 5-6)
-**Cíl**: Kompletní redesign UI
+### Fáze 3: DESIGN POLISH (Týden 5-6)
+**Cíl**: Dokončit brutalist design ve všech views
 
 | Úkol | Popis | Est. |
 |------|-------|------|
-| DS-2 | FloatingDock | 4h |
-| DS-3 | Nový EditorView layout | 6h |
-| DS-4 | Framer-motion animace | 4h |
-| DS-5 | RadialMenu | 3h |
-| DS-6 | Focus Mode | 3h |
+| DS-6, DS-7 | Header + Button komponenta | 3h |
+| DS-8 | AICommandCenter brutalist redesign | 4h |
+| DS-9 | EditorView asymetrický layout | 6h |
+| TXT-5, TXT-6 | Gemini prompty + zbylé texty česky | 3h |
+| - | Konzistence designu napříč všemi views | 4h |
 
-**Deliverable**: Nový, unikátní design
+**Deliverable**: Kompletní brutalist design ve všech částech aplikace
 
 ### Fáze 4: INNOVATION (Týden 7-8)
 **Cíl**: WOW faktory
@@ -438,7 +741,7 @@ async function runAutopilot(
 
 ---
 
-## ČÁST 6: API KEY SECURITY
+## ČÁST 7: API KEY SECURITY
 
 ### 6.1 Současný problém
 - API klíč se ukládá do LocalStorage a zůstává tam
@@ -570,7 +873,7 @@ export default defineConfig({
 
 ---
 
-## ČÁST 7: TECHNICKÉ POŽADAVKY
+## ČÁST 8: TECHNICKÉ POŽADAVKY
 
 ### Nové dependencies
 ```json
@@ -626,10 +929,11 @@ utils/
 
 ### Co děláme:
 1. ✅ **Opravíme Autocrop** - AI-powered smart cropping
-2. ✅ **Redesign "Darkroom Cinema"** - unikátní, ne generický
-3. ✅ **AI Command Center** - samostatná AI sekce s plnou kontrolou
-4. ✅ **WOW faktory** - background removal, voice commands, scoring
-5. ✅ **API Key Security** - vymazání klíče funguje, POUZE lokální uložení, žádný GitHub/cloud
+2. ✅ **RADIKÁLNÍ Redesign "BRUTALIST PHOTO LAB"** - ostré hrany, žádné gradienty, průmyslový look
+3. ✅ **Oprava textů** - encoding fix (â€¢ → •), kompletní česká lokalizace
+4. ✅ **AI Command Center** - samostatná AI sekce s plnou kontrolou
+5. ✅ **WOW faktory** - background removal, voice commands, scoring
+6. ✅ **API Key Security** - vymazání klíče funguje, POUZE lokální uložení, žádný GitHub/cloud
 
 ### Očekávaný výsledek:
 - **Profesionální** - ne toy, ale serious tool
