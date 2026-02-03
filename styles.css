@@ -1,16 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-void: #000000;
-  --bg-surface: #0d0d0d;
-  --bg-elevated: #1a1a1a;
-  --accent-primary: #ff0040;
-  --accent-secondary: #ff3366;
-  --accent-warning: #ffcc00;
+  --bg-void: #050505;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #111111;
+  
+  /* Modern Dark SaaS Palette */
+  --accent-primary: #6366f1; /* Indigo 500 */
+  --accent-secondary: #ec4899; /* Pink 500 */
+  --accent-glow: rgba(99, 102, 241, 0.5);
+  
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
   --border-subtle: #1f1f1f;
@@ -18,43 +21,47 @@
 
 body {
   margin: 0;
-  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: "Plus Jakarta Sans", sans-serif;
   background-color: var(--bg-void);
   color: white;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-* {
-  border-radius: 0 !important;
-  box-shadow: none !important;
+/* --- ANIMATIONS --- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-[class*="bg-gradient"] {
-  background-image: none !important;
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-[class*="backdrop-blur"] {
-  backdrop-filter: none !important;
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-[class*="blur"] {
-  filter: none !important;
+.animate-fade-in-right {
+  animation: fadeInRight 0.4s ease-out forwards;
 }
 
+/* --- TYPOGRAPHY --- */
 .heading {
-  font-family: "Space Grotesk", sans-serif;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-.body-text {
-  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+.mono-text {
+  font-family: "IBM Plex Mono", monospace;
 }
 
+/* --- SCROLLBAR --- */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -62,5 +69,23 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1f1f1f;
+  background: #333;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* --- UTILS --- */
+.glass-panel {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Concave corner utility (simulated via mask or pseudo-elements if needed later) */
+.concave-corner {
+  position: relative;
+  /* Advanced CSS would go here if we used clip-path */
 }

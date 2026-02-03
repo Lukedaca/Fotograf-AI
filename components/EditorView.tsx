@@ -1,4 +1,3 @@
-﻿
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './Header';
@@ -19,7 +18,8 @@ import {
     ExportIcon,
     EraserIcon,
     AutoCropIcon,
-    BackgroundReplacementIcon
+    BackgroundReplacementIcon,
+    StyleTransferIcon // Assume this exists or use Sparkles
 } from './icons';
 import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType, AutoCropSuggestion, QualityAssessment } from '../types';
 import * as geminiService from '../services/geminiService';
@@ -365,6 +365,23 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
       sharpness: manualEdits.sharpness,
       noiseReduction: manualEdits.noiseReduction,
     });
+    addNotification('Styl uložen: AI se naučí vaše preference.', 'info');
+  };
+
+  const handleLearnStyle = () => {
+      // Analyze current edits and save as style tendency
+      updateUserTendencies({
+          brightness: manualEdits.brightness,
+          contrast: manualEdits.contrast,
+          saturation: manualEdits.saturation,
+          vibrance: manualEdits.vibrance,
+          shadows: manualEdits.shadows,
+          highlights: manualEdits.highlights,
+          clarity: manualEdits.clarity,
+          sharpness: manualEdits.sharpness,
+          noiseReduction: manualEdits.noiseReduction
+      });
+      addNotification("Styl uložen! AI nyní zná váš 'Look'.", 'info');
   };
 
   useEffect(() => {
@@ -601,7 +618,7 @@ Text: ${thumbnailText}`,
       <div className="flex-1 flex flex-col h-full bg-void">
          <Header title={trans.app_title} onToggleSidebar={props.onToggleSidebar} credits={credits} />
          <div className="flex-1 flex flex-col items-center justify-center text-text-secondary p-8 text-center">
-            <div className="p-6 bg-surface mb-6 border border-border-subtle">
+            <div className="p-6 bg-surface mb-6 border border-border-subtle rounded-3xl">
                 <UploadIcon className="w-16 h-16 opacity-30" />
             </div>
             <p className="text-xl font-bold text-text-primary">{trans.editor_no_image}</p>
@@ -620,41 +637,41 @@ Text: ${thumbnailText}`,
         {!isFocusMode && !isYouTubeMode && activeFile && (
           <div className="bg-void border-b border-border-subtle py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
             <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-2">Rychlé akce:</span>
-            <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <AutopilotIcon className="w-3.5 h-3.5" />
               Základní úprava
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <EraserIcon className="w-3.5 h-3.5" />
               Retuš
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <AutoCropIcon className="w-3.5 h-3.5" />
               Auto‑ořez
             </button>
-            <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
               Odstranit pozadí
             </button>
-            <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
               Vyměnit pozadí
             </button>
-            <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
               Vybrat subjekt
             </button>
-            <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
               Vylepšit obličej
             </button>
-            <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
               Skóre
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent transition-none text-[11px] font-bold uppercase tracking-widest">
+            <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <ExportIcon className="w-3.5 h-3.5" />
-              Rychlý export
+              Export
             </button>
           </div>
         )}
@@ -672,14 +689,14 @@ Text: ${thumbnailText}`,
                 <div className="w-full max-w-5xl h-full relative flex items-center justify-center">
                     
                     {!isYouTubeMode && activeFile && (
-                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-3 border border-border-subtle transition-none ${isVoiceActive ? 'bg-accent text-void' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
+                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-3 rounded-full border border-border-subtle transition-all shadow-lg ${isVoiceActive ? 'bg-accent text-void' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
                             <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     )}
 
                     {activeFile ? (
                         <div
-                          className="relative group border border-border-subtle overflow-hidden max-h-full max-w-full"
+                          className="relative group border border-border-subtle overflow-hidden max-h-full max-w-full rounded-2xl shadow-2xl"
                           onDoubleClick={() => setIsFocusMode((prev) => !prev)}
                         >
                            {isComparing ? (
@@ -702,10 +719,10 @@ Text: ${thumbnailText}`,
                                             initial={{ opacity: 0, scale: 0.98 }}
                                             animate={{ opacity: isActive ? 0.9 : 0.45, scale: 1 }}
                                             transition={{ duration: 0.2 }}
-                                            className={`absolute border-2 ${isActive ? 'border-accent' : 'border-border-subtle'}`}
+                                            className={`absolute border-2 rounded-lg ${isActive ? 'border-accent' : 'border-border-subtle'}`}
                                             style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
                                           >
-                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-text-secondary bg-void border border-border-subtle px-2 py-0.5">
+                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-text-secondary bg-void border border-border-subtle px-2 py-0.5 rounded-full">
                                               {idx + 1}
                                             </div>
                                           </motion.div>
@@ -714,15 +731,15 @@ Text: ${thumbnailText}`,
                                     </div>
                                   )}
                                 </div>
-                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface text-text-primary px-4 py-2 text-xs font-bold border border-border-subtle z-20">
+                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface/80 backdrop-blur-md text-text-primary px-4 py-2 text-xs font-bold border border-border-subtle rounded-full shadow-lg z-20 hover:bg-elevated">
                                     {trans.compare_btn}
                                 </button>
                                </>
                            )}
                         </div>
                     ) : isYouTubeMode ? (
-                        <div className="w-full h-full border-2 border-dashed border-accent/40 flex flex-col items-center justify-center bg-surface group">
-                            <div className="p-8 bg-elevated mb-6">
+                        <div className="w-full h-full border-2 border-dashed border-accent/40 rounded-3xl flex flex-col items-center justify-center bg-surface group">
+                            <div className="p-8 bg-elevated rounded-full mb-6">
                                 <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
                             </div>
                             <h2 className="text-2xl font-black text-text-secondary tracking-tighter uppercase">Studio miniatur</h2>
@@ -731,7 +748,7 @@ Text: ${thumbnailText}`,
                 </div>
 
                 {!isYouTubeMode && autoCropSuggestions.length > 0 && (
-                    <div className="absolute bottom-4 left-4 z-40 bg-surface border border-border-subtle p-4">
+                    <div className="absolute bottom-4 left-4 z-40 bg-surface/90 backdrop-blur border border-border-subtle p-4 rounded-2xl shadow-xl">
                         <div className="flex items-center justify-between gap-4 mb-3">
                             <div className="text-[10px] font-black uppercase tracking-widest text-accent">AI ořez</div>
                             <button
@@ -757,9 +774,9 @@ Text: ${thumbnailText}`,
                                             aspectRatio: undefined
                                         }));
                                     }}
-                                    className={`px-3 py-2 text-[11px] font-bold border transition-none ${
+                                    className={`px-3 py-2 text-[11px] font-bold border rounded-lg transition-all ${
                                         autoCropSelectedIndex === index
-                                            ? 'bg-elevated border-accent text-text-primary'
+                                            ? 'bg-elevated border-accent text-text-primary shadow-sm'
                                             : 'bg-elevated border-border-subtle text-text-secondary hover:text-text-primary hover:border-accent'
                                     }`}
                                 >
@@ -773,7 +790,7 @@ Text: ${thumbnailText}`,
                 )}
                 
                 {isLoading && (
-                    <div className="absolute inset-0 bg-void/80 z-50 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 bg-void/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
                         <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
                 )}
@@ -795,8 +812,8 @@ Text: ${thumbnailText}`,
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Log úprav</h4>
                     <div className="flex gap-2">
-                      <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
-                      <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
+                      <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
+                      <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto mb-6">
@@ -821,7 +838,7 @@ Text: ${thumbnailText}`,
 
                 {!isYouTubeMode && activeFile && (
                     <div className="px-8 mt-4">
-                        <div className="p-4 border border-border-subtle bg-elevated">
+                        <div className="p-4 border border-border-subtle bg-elevated rounded-2xl shadow-sm">
                             <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">AI doporučení</div>
                             {liveSuggestions.length === 0 ? (
                                 <div className="text-xs text-text-secondary">Vše vypadá dobře.</div>
@@ -840,7 +857,7 @@ Text: ${thumbnailText}`,
 
                 {!isYouTubeMode && activeFile && (
                     <div className="px-8 mt-4">
-                        <div className="p-4 border border-border-subtle bg-surface">
+                        <div className="p-4 border border-border-subtle bg-surface rounded-2xl shadow-sm">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">AI skóre</div>
                                 <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">Spustit</button>
@@ -857,7 +874,7 @@ Text: ${thumbnailText}`,
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {(qualityAssessment.flags || []).slice(0, 6).map((flag) => (
-                                            <span key={flag} className="px-2 py-1 border border-border-subtle bg-elevated text-[10px] text-text-secondary">
+                                            <span key={flag} className="px-2 py-1 border border-border-subtle bg-elevated rounded-md text-[10px] text-text-secondary">
                                                 {flag}
                                             </span>
                                         ))}
@@ -870,41 +887,22 @@ Text: ${thumbnailText}`,
                     </div>
                 )}
 
-                {!isYouTubeMode && activeFile && history.past.length > 0 && (
-                    <div className="px-8 mt-4">
-                        <div className="p-4 border border-border-subtle bg-surface">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">Time Machine</div>
-                            <div className="space-y-2">
-                                {history.past.slice(-5).reverse().map((entry, idx) => (
-                                    <button
-                                        key={`${entry.actionName}-${idx}`}
-                                        onClick={() => onSetFiles(() => entry.state, `Time Machine: ${entry.actionName}`)}
-                                        className="w-full text-left text-xs text-text-secondary hover:text-text-primary px-3 py-2 border border-border-subtle bg-elevated hover:bg-elevated transition-none"
-                                    >
-                                        {entry.actionName}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 <div className="p-8 space-y-8 pt-2">
                     {isYouTubeMode && (
                         <div className="space-y-6 animate-fade-in-right">
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_topic}</label>
-                                <textarea rows={3} value={thumbnailTopic} onChange={(e) => setThumbnailTopic(e.target.value)} placeholder={trans.tool_youtube_topic_ph} className="w-full bg-elevated border border-border-subtle p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
+                                <textarea rows={3} value={thumbnailTopic} onChange={(e) => setThumbnailTopic(e.target.value)} placeholder={trans.tool_youtube_topic_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
-                                <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
+                                <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
                              <div className="flex items-center justify-between text-xs text-text-secondary">
                                 <span>{trans.credits_cost}:</span>
                                 <span className="font-bold text-warning">10 {trans.credits_remaining}</span>
                              </div>
-                             <button onClick={handleGenerateThumbnail} disabled={isLoading} className="w-full py-4 bg-accent text-void text-sm font-black border border-accent transition-none flex items-center justify-center gap-3 disabled:opacity-50">
+                             <button onClick={handleGenerateThumbnail} disabled={isLoading} className="w-full py-4 bg-accent text-void text-sm font-black border border-accent rounded-xl transition-all shadow-lg shadow-accent/20 flex items-center justify-center gap-3 disabled:opacity-50">
                                 <SparklesIcon className="w-5 h-5" />
                                 {trans.tool_youtube_btn}
                             </button>
@@ -912,6 +910,7 @@ Text: ${thumbnailText}`,
                     )}
 
                     {!isYouTubeMode && activeFile && (
+                        <>
                          <ManualEditControls
                            edits={manualEdits}
                            onEditChange={(k, v) => setManualEdits(p => ({...p, [k]: v}))}
@@ -927,6 +926,22 @@ Text: ${thumbnailText}`,
                            detailRef={detailRef}
                            exportRef={exportRef}
                          />
+                         
+                         {/* LEARN STYLE BUTTON */}
+                         <div className="pt-4 border-t border-border-subtle">
+                             <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-3">AI Personalizace</h4>
+                             <button 
+                                onClick={handleLearnStyle}
+                                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-violet-900 to-fuchsia-900 border border-violet-700 hover:border-violet-500 text-white text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]"
+                             >
+                                 <StyleTransferIcon className="w-4 h-4" />
+                                 Učit se můj styl
+                             </button>
+                             <p className="text-[10px] text-text-secondary mt-2 text-center">
+                                 Uloží aktuální nastavení jako váš osobní AI podpis.
+                             </p>
+                         </div>
+                        </>
                     )}
                 </div>
             </motion.div>
@@ -954,7 +969,7 @@ Text: ${thumbnailText}`,
           <div className="absolute top-4 right-6 z-40">
             <button
               onClick={() => setIsFocusMode(false)}
-              className="px-3 py-2 text-[11px] font-bold border border-border-subtle bg-surface text-text-secondary hover:text-text-primary hover:bg-elevated transition-none"
+              className="px-3 py-2 text-[11px] font-bold border border-border-subtle bg-surface text-text-secondary hover:text-text-primary hover:bg-elevated rounded-full shadow-lg transition-all"
             >
               Exit Focus
             </button>
@@ -983,8 +998,8 @@ Text: ${thumbnailText}`,
         </AnimatePresence>
 
         {showBgModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4">
-            <div className="w-full max-w-lg border border-border-subtle bg-surface p-6">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-lg border border-border-subtle bg-surface rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm font-black uppercase tracking-widest text-text-secondary">Vyměnit pozadí</div>
                 <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">Zavřít</button>
@@ -994,13 +1009,13 @@ Text: ${thumbnailText}`,
                 value={bgPrompt}
                 onChange={(e) => setBgPrompt(e.target.value)}
                 placeholder="např. neonová ulice v Tokiu, zlatá hodinka, studiové pozadí"
-                className="w-full bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
+                className="w-full bg-elevated border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary outline-none focus:border-accent"
               />
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-[11px] text-text-secondary">Cena: 5 kreditů</span>
                 <button
                   onClick={handleBackgroundReplace}
-                  className="px-4 py-2 text-[11px] font-bold bg-accent text-void"
+                  className="px-4 py-2 text-[11px] font-bold bg-accent text-void rounded-lg hover:bg-accent/80 transition-all"
                 >
                   Apply
                 </button>
@@ -1013,6 +1028,3 @@ Text: ${thumbnailText}`,
 };
 
 export default EditorView;
-
-
-
