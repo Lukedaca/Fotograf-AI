@@ -29,64 +29,75 @@ export const base64ToFile = async (base64: string, filename: string, mimeType: s
 
 /**
  * Normalizes an image file: ensures it's a JPEG and resizes it only if absolutely necessary.
+ * Falls back to original file if processing fails.
  */
 export const normalizeImageFile = (
     file: File,
     maxSize = 6000, 
     quality = 0.98 
 ): Promise<File> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+        // Fallback mechanism: if anything fails, resolve with original file
+        const safeResolve = () => {
+            console.warn('Image normalization failed, using original file:', file.name);
+            resolve(file);
+        };
+
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                let { width, height } = img;
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                try {
+                    let { width, height } = img;
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
 
-                if (!ctx) return reject(new Error('Could not get canvas context'));
+                    if (!ctx) return safeResolve();
 
-                if (width > maxSize || height > maxSize) {
-                     if (width > height) {
-                        height = Math.round((height * maxSize) / width);
-                        width = maxSize;
-                    } else {
-                        width = Math.round((width * maxSize) / height);
-                        height = maxSize;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob) {
-                            const newFileName = file.name.replace(/\.[^/.]+$/, '.jpeg');
-                            const normalizedFile = new File([blob], newFileName, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now(),
-                            });
-                            resolve(normalizedFile);
+                    if (width > maxSize || height > maxSize) {
+                         if (width > height) {
+                            height = Math.round((height * maxSize) / width);
+                            width = maxSize;
                         } else {
-                            reject(new Error('Canvas toBlob failed.'));
+                            width = Math.round((width * maxSize) / height);
+                            height = maxSize;
                         }
-                    },
-                    'image/jpeg',
-                    quality
-                );
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                const newFileName = file.name.replace(/\.[^/.]+$/, '.jpeg');
+                                const normalizedFile = new File([blob], newFileName, {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now(),
+                                });
+                                resolve(normalizedFile);
+                            } else {
+                                safeResolve();
+                            }
+                        },
+                        'image/jpeg',
+                        quality
+                    );
+                } catch (e) {
+                    safeResolve();
+                }
             };
-            img.onerror = (error) => reject(error);
+            img.onerror = safeResolve;
             if (event.target?.result) {
                 img.src = event.target.result as string;
             } else {
-                reject(new Error("File could not be read."));
+                safeResolve();
             }
         };
-        reader.onerror = (error) => reject(error);
+        reader.onerror = safeResolve;
         reader.readAsDataURL(file);
     });
 };
