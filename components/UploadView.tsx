@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { UploadIcon, ArrowPathIcon } from './icons';
 import Header from './Header';
@@ -55,7 +54,7 @@ const UploadView: React.FC<UploadViewProps> = ({
           const file = incomingFiles[i];
           if (isRawFile(file)) {
               rawCount++;
-              setProcessingStatus(`RAW: ${file.name} (${rawCount}...)`);
+              setProcessingStatus(`Konverze RAW: ${file.name} (${rawCount}...)`);
               try {
                   const convertedFile = await processRawFile(file);
                   finalFiles.push(convertedFile);
@@ -107,36 +106,50 @@ const UploadView: React.FC<UploadViewProps> = ({
       />
       <div className="flex-1 w-full flex items-center justify-center p-4 sm:p-8">
         {isProcessing ? (
-            <div className="flex flex-col items-center justify-center text-text-secondary animate-fade-in">
+            <div className="flex flex-col items-center justify-center text-text-secondary animate-fade-in glass-panel p-12 rounded-3xl">
                  <div className="w-16 h-16 mb-6 relative">
-                    <div className="absolute inset-0 border-4 border-border-subtle"></div>
-                    <div className="absolute inset-0 border-4 border-t-accent border-r-accent border-b-transparent border-l-transparent animate-spin"></div>
+                    <div className="absolute inset-0 border-4 border-[#ffffff10] rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-t-indigo-500 border-r-indigo-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
                  </div>
-                 <h3 className="text-2xl font-bold text-text-primary mb-2">{t.upload_processing}</h3>
-                 <p>{processingStatus}</p>
+                 <h3 className="text-2xl font-bold text-white mb-2">{t.upload_processing}</h3>
+                 <p className="text-gray-400 font-mono text-xs">{processingStatus}</p>
             </div>
         ) : (
             <div 
-            className={`w-full max-w-4xl flex flex-col items-center justify-center p-12 border transition-none relative ${isDragging ? 'border-accent bg-surface' : 'border-border-subtle bg-surface'}`}
+            className={`
+                w-full max-w-4xl flex flex-col items-center justify-center p-16 
+                border-2 border-dashed rounded-3xl transition-all duration-300 relative overflow-hidden group
+                ${isDragging 
+                    ? 'border-indigo-500 bg-indigo-500/10 shadow-[0_0_50px_rgba(99,102,241,0.2)] scale-[1.02]' 
+                    : 'border-[#ffffff15] bg-[#ffffff02] hover:border-[#ffffff30] hover:bg-[#ffffff05]'}
+            `}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             >
-              <div className="text-center">
+              {/* Background Glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500 rounded-full blur-[120px] opacity-0 group-hover:opacity-10 transition-opacity duration-700 pointer-events-none"></div>
+
+              <div className="text-center relative z-10">
                 {projectName && (
-                  <div className="mb-6 text-xs uppercase tracking-[0.2em] text-text-secondary">
-                    {t.crm_uploading_to} <span className="text-text-primary">{projectName}</span>
+                  <div className="mb-6 inline-flex items-center px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-[10px] font-bold uppercase tracking-widest text-indigo-300">
+                    Project: {projectName}
                   </div>
                 )}
-                <UploadIcon className="mx-auto h-16 w-16 text-text-secondary mb-6" />
-                <h3 className="mt-4 text-2xl font-bold tracking-tight text-text-primary">
+                
+                <div className={`mx-auto h-20 w-20 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 ${isDragging ? 'bg-indigo-500 text-white shadow-lg rotate-3 scale-110' : 'bg-[#ffffff08] text-gray-400 group-hover:text-white group-hover:scale-110 group-hover:bg-[#ffffff10]'}`}>
+                    <UploadIcon className="h-10 w-10" />
+                </div>
+
+                <h3 className="mt-4 text-3xl font-extrabold tracking-tight text-white mb-2">
                   {t.upload_drag}
                 </h3>
-                <p className="mt-2 text-sm text-text-secondary">
-                  {t.upload_support} <strong>RAW (CR2, NEF, ARW...)</strong>
+                <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
+                  Podporujeme <strong>JPG, PNG, WEBP</strong> a profesionální <strong>RAW</strong> formáty (CR2, NEF, ARW) s automatickou konverzí.
                 </p>
-                <div className="mt-8">
+                
+                <div className="mt-10">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -148,14 +161,15 @@ const UploadView: React.FC<UploadViewProps> = ({
                   <button
                     type="button"
                     onClick={onButtonClick}
-                    className="inline-flex items-center px-8 py-3 border border-accent text-sm font-semibold text-void bg-accent transition-none"
+                    className="inline-flex items-center px-8 py-4 bg-white text-black text-sm font-bold rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-105"
                   >
                     <UploadIcon className="-ml-1 mr-3 h-5 w-5" />
-                    {t.upload_btn}
+                    Vybrat soubory
                   </button>
                 </div>
-                <p className="mt-8 text-xs text-text-secondary">
-                  {t.upload_raw}
+                
+                <p className="mt-8 text-[10px] text-gray-600 font-mono uppercase tracking-widest">
+                  Maximum file size: 50MB
                 </p>
               </div>
             </div>
