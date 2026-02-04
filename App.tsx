@@ -308,6 +308,10 @@ function App() {
   const handleFilesSelected = useCallback(async (selectedFiles: File[]) => {
     const results = await Promise.allSettled(
       selectedFiles.map(async (file): Promise<UploadedFile | null> => {
+        if (file.size === 0) {
+            addNotification(`Soubor ${file.name} je prázdný (0 bajtů). Zkontrolujte, zda je stažen offline.`, 'error');
+            return null;
+        }
         try {
           const normalizedFile = await normalizeImageFile(file);
           const previewUrl = URL.createObjectURL(normalizedFile);
@@ -318,6 +322,7 @@ function App() {
             originalPreviewUrl: previewUrl,
           };
         } catch (error) {
+          console.error('File processing error:', error);
           addNotification(`${t.msg_error}: ${file.name}`, 'error');
           return null;
         }
