@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { EditorAction, View } from '../types';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -44,10 +43,16 @@ interface NavItemProps {
 const NavItem: React.FC<NavItemProps> = ({ icon, label, onClick, isCollapsed, isActive }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center text-xs font-mono uppercase tracking-widest border-l-4 transition-none ${isCollapsed ? 'justify-center py-3' : 'space-x-3 px-4 py-3'} ${isActive ? 'text-white border-accent bg-gray-800/60' : 'text-gray-400 border-transparent hover:border-accent hover:bg-gray-800/40'}`}
+    className={`
+      w-full flex items-center text-xs font-semibold tracking-wide transition-all duration-200
+      ${isCollapsed ? 'justify-center py-3' : 'space-x-3 px-4 py-2.5 rounded-lg mx-2 mb-1'} 
+      ${isActive 
+        ? 'nav-item-active text-white' 
+        : 'text-gray-400 hover:text-white hover:bg-white/5'}
+    `}
     title={isCollapsed ? label : undefined}
   >
-    <span className="relative z-10">{icon}</span>
+    <span className={`relative z-10 transition-transform ${isActive ? 'scale-110 text-indigo-400' : ''}`}>{icon}</span>
     {!isCollapsed && <span className="relative z-10">{label}</span>}
   </button>
 );
@@ -110,30 +115,34 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
 
   return (
     <>
-      <div className={`fixed inset-0 bg-void/80 z-40 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}></div>
-      <aside className={`fixed top-0 left-0 h-full bg-void border-r border-border-subtle z-50 transform transition-all duration-300 ease-in-out flex-shrink-0 ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} ${isCollapsed ? 'lg:w-24' : 'lg:w-64'} lg:translate-x-0`}>
+      <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}></div>
+      <aside className={`fixed top-0 left-0 h-full bg-[#080808]/90 backdrop-blur-xl border-r border-[#ffffff0a] z-50 transform transition-all duration-300 ease-out flex-shrink-0 ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} ${isCollapsed ? 'lg:w-20' : 'lg:w-64'} lg:translate-x-0 shadow-[4px_0_24px_rgba(0,0,0,0.4)]`}>
         <div className="flex flex-col h-full">
-          <div className={`relative flex items-center h-20 border-b border-gray-800 flex-shrink-0 transition-all duration-300 ${isCollapsed ? 'justify-center px-4' : 'space-x-3 px-5'}`}>
-            <button onClick={() => handleNavigation({ view: 'dashboard' })} className="flex items-center space-x-3 group">
-              <LogoIcon className="w-8 h-8 text-accent flex-shrink-0" />
+          {/* Header */}
+          <div className={`relative flex items-center h-20 border-b border-[#ffffff0a] flex-shrink-0 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'px-6'}`}>
+            <button onClick={() => handleNavigation({ view: 'dashboard' })} className="flex items-center space-x-3 group w-full">
+              <div className="relative">
+                <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-40 group-hover:opacity-60 transition-opacity"></div>
+                <LogoIcon className="w-8 h-8 text-white relative z-10" />
+              </div>
               {!isCollapsed && (
                 <div className="flex-grow overflow-hidden text-left">
-                  <h1 className="text-lg font-bold text-white heading">Fotograf AI</h1>
-                  <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest -mt-1">Brutalist Lab</p>
+                  <h1 className="text-base font-bold text-white tracking-tight leading-none">Fotograf AI</h1>
+                  <p className="text-[10px] text-gray-500 font-medium mt-1 tracking-wide">PRO STUDIO</p>
                 </div>
               )}
             </button>
-            <button onClick={onToggleCollapse} className="hidden lg:flex items-center justify-center absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 w-7 h-7 bg-elevated border border-border-subtle text-text-secondary">
-                <ChevronDoubleLeftIcon className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+            <button onClick={onToggleCollapse} className="hidden lg:flex items-center justify-center absolute top-1/2 -translate-y-1/2 -right-3 z-20 w-6 h-6 bg-[#1a1a1a] border border-[#333] rounded-full text-gray-400 hover:text-white hover:border-indigo-500 transition-colors shadow-lg">
+                <ChevronDoubleLeftIcon className={`w-3 h-3 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
             </button>
           </div>
           
-          <nav className="flex-grow flex flex-col space-y-8 overflow-y-auto p-4 custom-scrollbar">
+          <nav className="flex-grow flex flex-col space-y-6 overflow-y-auto py-6 custom-scrollbar">
             {/* CRM Section */}
             <div>
-              {!isCollapsed && <h2 className="px-4 mb-2 text-[10px] font-mono tracking-widest text-gray-400 uppercase">CRM</h2>}
-              {isCollapsed && <hr className="mb-4 border-gray-800" />}
-              <div className="space-y-1.5 relative">
+              {!isCollapsed && <h2 className="px-6 mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase opacity-70">CRM</h2>}
+              {isCollapsed && <div className="h-px w-8 mx-auto bg-[#ffffff0a] mb-4"></div>}
+              <div className="space-y-0.5">
                 {crmTools.map((item) => {
                   const isActive =
                     item.view === currentView ||
@@ -148,9 +157,9 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
 
             {/* Workflow Section */}
             <div>
-              {!isCollapsed && <h2 className="px-4 mb-2 text-[10px] font-mono tracking-widest text-gray-400 uppercase">{t.pipeline_workflow}</h2>}
-              {isCollapsed && <hr className="mb-4 border-gray-800" />}
-              <div className="space-y-1.5 relative">
+              {!isCollapsed && <h2 className="px-6 mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase opacity-70">{t.pipeline_workflow}</h2>}
+              {isCollapsed && <div className="h-px w-8 mx-auto bg-[#ffffff0a] my-4"></div>}
+              <div className="space-y-0.5">
                 {workflowTools.map((item) => {
                   const isActive = item.view === currentView && (item.action ? item.action === (activeAction?.action) : activeAction === null);
                   return (
@@ -162,9 +171,9 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
 
             {/* Creative Section */}
             <div>
-              {!isCollapsed && <h2 className="px-4 mb-2 text-[10px] font-mono tracking-widest text-gray-400 uppercase">{t.pipeline_creative}</h2>}
-              {isCollapsed && <hr className="my-4 border-gray-800" />}
-              <div className="space-y-1.5 relative">
+              {!isCollapsed && <h2 className="px-6 mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase opacity-70">{t.pipeline_creative}</h2>}
+              {isCollapsed && <div className="h-px w-8 mx-auto bg-[#ffffff0a] my-4"></div>}
+              <div className="space-y-0.5">
                 {creativeTools.map((item) => {
                   const isActive = item.view === currentView && (item.action ? item.action === (activeAction?.action) : !activeAction);
                   return (
@@ -176,9 +185,9 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
 
             {/* Management Section */}
             <div>
-              {!isCollapsed && <h2 className="px-4 mb-2 text-[10px] font-mono tracking-widest text-gray-400 uppercase">{t.pipeline_management}</h2>}
-              {isCollapsed && <hr className="my-4 border-gray-800" />}
-              <div className="space-y-1.5 relative">
+              {!isCollapsed && <h2 className="px-6 mb-2 text-[10px] font-bold tracking-widest text-gray-500 uppercase opacity-70">{t.pipeline_management}</h2>}
+              {isCollapsed && <div className="h-px w-8 mx-auto bg-[#ffffff0a] my-4"></div>}
+              <div className="space-y-0.5">
                 {managementTools.map((item) => {
                   const isActive = item.view === currentView && (item.action ? item.action === (activeAction?.action) : !activeAction);
                   return (
@@ -190,8 +199,14 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
           </nav>
 
           {!isCollapsed && (
-            <div className="mt-auto pt-4 p-4 text-center text-[10px] text-gray-500 font-mono flex-shrink-0">
-              Fotograf AI © 2026 Brutalist Lab
+            <div className="mt-auto pt-4 p-6 border-t border-[#ffffff0a]">
+              <div className="flex items-center gap-3 bg-[#ffffff05] p-3 rounded-xl border border-[#ffffff0a]">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500"></div>
+                  <div>
+                      <p className="text-xs font-bold text-white">Pro Plan</p>
+                      <p className="text-[10px] text-gray-400">Unlimited AI</p>
+                  </div>
+              </div>
             </div>
           )}
         </div>
