@@ -27,7 +27,7 @@ const translations = {
     nav_clients: "Klienti",
     nav_ai_gallery: "AI Galerie",
     nav_ai_command: "AI Řídicí centrum",
-    
+
     pipeline_workflow: "Postup",
     pipeline_creative: "Kreativa",
     pipeline_management: "Správa",
@@ -137,7 +137,7 @@ const translations = {
     credits_low: "Nedostatek kreditů",
     credits_cost: "Cena",
     credits_buy: "Dobít kredity",
-    
+
     store_title: "Obchod s kredity",
     store_desc: "Získejte přístup k prémiovým AI funkcím. Kredity se odečítají pouze za úspěšné generování.",
     store_pack_basic: "Start",
@@ -146,7 +146,7 @@ const translations = {
     store_btn_buy: "Koupit",
     store_best_value: "Nejvýhodnější",
     store_success: "Kredity úspěšně připsány!",
-    
+
     onboarding_title: "Vítejte ve Studiu Budoucnosti",
     onboarding_step1_title: "Vše na jednom místě",
     onboarding_step1_desc: "Od RAW konverze po generování YouTube miniatur. Fotograf AI je váš kompletní kreativní tým.",
@@ -165,18 +165,18 @@ const translations = {
     turbo_express: "Turbo postup",
     turbo_express_desc: "Jedním klikem: Autopilot + Ořez + Popisky.",
     turbo_express_btn: "Spustit turbo postup",
-    
+
     home_title: "Fotograf AI",
     home_subtitle: "Profesionální workflow pro fotografy. Šetřete čas, tvořte umění a mějte hotovo v mžiku.",
     home_enter: "Vstoupit do studia",
-    
+
     upload_title: "Nahrát fotky",
     upload_drag: "Přetáhněte fotografie sem",
     upload_support: "Podpora JPG, PNG, WEBP a",
     upload_raw: "RAW soubory budou automaticky vyvolány a převedeny.",
     upload_btn: "Vybrat soubory",
     upload_processing: "Zpracovávám soubory...",
-    
+
     editor_no_image: "Žádný vybraný obrázek",
     editor_upload_hint: "Nahrajte nebo vyberte obrázek pro zahájení úprav.",
     editor_analyzing: "Analyzuji...",
@@ -184,7 +184,7 @@ const translations = {
     editor_suggestions: "Návrhy na vylepšení",
     editor_proactive: "Proaktivní návrhy",
     editor_tech: "Technické informace",
-    
+
     tool_autopilot_desc: "AI automaticky vylepší váš obrázek. Zachová strukturu a zaměří se na barvy a světlo.",
     tool_autopilot_btn: "Spustit Autopilot",
     tool_remove_desc: "Popište objekt, který chcete odstranit.",
@@ -206,7 +206,7 @@ const translations = {
     tool_social_title: "Asistent sociálních sítí",
     tool_social_desc: "AI vytvoří poutavé popisky a hashtagy pro váš Instagram.",
     tool_social_btn: "Generovat texty",
-    
+
     tool_video_title: "Oživení fotky (Veo)",
     tool_video_desc: "Vytvořte z fotky video pomocí AI modelu Veo.",
     tool_video_prompt: "Popište pohyb (např. 'filmový zoom')",
@@ -220,7 +220,7 @@ const translations = {
     tool_youtube_text_ph: "např. ŠOKUJÍCÍ PRAVDA",
     tool_youtube_face: "Použít aktuální fotku jako tvář",
     tool_youtube_btn: "Generovat Miniaturu",
-    
+
     manual_title: "Manuální úpravy",
     manual_reset: "Resetovat",
     manual_crop_active: "Aktivovat manuální ořez",
@@ -262,7 +262,7 @@ const translations = {
     gen_btn: "Generovat obrázek",
     gen_generating: "Generuji...",
     gen_add: "Přidat do projektu",
-    
+
     raw_title: "RAW Konvertor",
     raw_subtitle: "Hromadná konverze profesionálních RAW souborů.",
     raw_convert: "Konvertovat",
@@ -274,7 +274,7 @@ const translations = {
     raw_or_click: "or click",
     raw_select_other: "Vybrat jiné",
     raw_no_files: "Nebyly vybrány žádné soubory.",
-    
+
     msg_api_missing: "Nastala chyba v komunikaci s AI.",
     msg_success: "Akce dokončena.",
     msg_error: "Došlo k chybě.",
@@ -285,7 +285,174 @@ const translations = {
     compare_before: "Před",
     compare_after: "Po",
     compare_btn: "Porovnat",
-    export_btn: "Stáhnout"
+    export_btn: "Stáhnout",
+
+    // Dashboard extras
+    dash_welcome_title: "Vítejte ve",
+    dash_welcome_studio: "Studiu",
+    dash_welcome_desc: "Vaše AI temná komora je připravena. Nahrajte fotografie a nechte umělou inteligenci, aby se postarala o zbytek.",
+    dash_new_project: "Nový Projekt",
+    dash_open_editor: "Otevřít Editor",
+    dash_quick_tools: "Rychlé nástroje",
+    dash_culling_desc: "Automatický výběr nejlepších fotek.",
+    dash_autopilot_desc: "Vylepšení jedním kliknutím.",
+    dash_ai_generator: "AI Generátor",
+    dash_gen_desc: "Tvorba vizuálů z textu.",
+    dash_recent_activity: "Nedávná aktivita",
+    dash_show_all: "Zobrazit vše",
+    dash_items_ago: "položek • Před chvílí",
+    dash_no_history: "Zatím žádná historie.",
+    dash_available_credits: "Dostupné Kredity",
+    dash_plan_renewed: "Plán obnoven",
+    dash_topup: "Doplnit",
+
+    // API Key Modal
+    apikey_title: "API klíč",
+    apikey_desc: "Zadejte API klíč pro Google Gemini. Uloží se pouze lokálně v prohlížeči.",
+    apikey_label: "API klíč",
+    apikey_stored: "Uložený klíč",
+    apikey_update: "Aktualizovat klíč",
+    apikey_save: "Uložit klíč",
+    apikey_delete: "Smazat klíč",
+    apikey_session_only: "Vymazat klíč po zavření prohlížeče",
+    apikey_privacy: "Váš API klíč zůstává pouze v tomto prohlížeči. Nikdy ho neodesíláme na server ani na GitHub.",
+    apikey_billing: "Informace o účtování",
+
+    // Editor extras
+    editor_removing_bg: "Odstraňuji pozadí...",
+    editor_replacing_bg: "Nahrazuji pozadí...",
+    editor_bg_replace: "Výměna pozadí",
+    editor_enhancing_faces: "Vylepšuji obličeje...",
+    editor_scoring: "Hodnotím kvalitu...",
+    editor_ai_enhancing: "AI analyzuje a vylepšuje váš snímek...",
+    editor_ai_crop_search: "AI hledá nejlepší ořez...",
+    editor_autocrop_ready: "Auto-ořez připraven (1–3)",
+    editor_style_saved: "Styl uložen: AI se naučí vaše preference.",
+    editor_style_saved_look: "Styl uložen! AI nyní zná váš 'Look'.",
+    editor_selecting_subject: "Vybírám hlavní objekt...",
+    editor_subject_selected: "Objekt vybrán",
+    editor_quick_actions: "Rychlé akce:",
+    editor_basic_edit: "Základní úprava",
+    editor_retouch: "Retuš",
+    editor_auto_crop: "Auto‑ořez",
+    editor_remove_bg: "Odstranit pozadí",
+    editor_replace_bg: "Vyměnit pozadí",
+    editor_select_subject: "Vybrat subjekt",
+    editor_enhance_face: "Vylepšit obličej",
+    editor_score: "Skóre",
+    editor_preview: "Náhled",
+    editor_ai_crop: "AI ořez",
+    editor_cancel: "Zrušit",
+    editor_edit_log: "Log úprav",
+    editor_ai_recommendations: "AI doporučení",
+    editor_looks_good: "Vše vypadá dobře.",
+    editor_ai_score: "AI skóre",
+    editor_run: "Spustit",
+    editor_no_score: "Zatím bez hodnocení.",
+    editor_learn_style: "Učit se můj styl",
+    editor_learn_style_desc: "Uloží aktuální nastavení jako váš osobní AI podpis.",
+    editor_ai_personalization: "AI Personalizace",
+    editor_generating_thumbnail: "Gemini 3 Pro navrhuje virální miniaturu...",
+    editor_close: "Zavřít",
+    editor_bg_placeholder: "např. neonová ulice v Tokiu, zlatá hodinka, studiové pozadí",
+    editor_bg_cost: "Cena: 5 kreditů",
+    editor_shortcuts: "Zkratky: 1, 2, 3",
+    editor_stop_compare: "Zastavit porovnání",
+    editor_compare: "Porovnat",
+    editor_apply: "Použít",
+
+    // Suggestions
+    suggestion_lower_highlights: "Zkuste snížit světla pro zachování detailů.",
+    suggestion_raise_shadows: "Zvedněte stíny pro více detailů.",
+    suggestion_raise_vibrance: "Zvyšte vibrance pro přirozenější sytost.",
+    suggestion_add_noise_reduction: "Přidejte lehkou redukci šumu pro čistší obraz.",
+    suggestion_raise_contrast: "Zvyšte kontrast pro lepší dynamiku.",
+    suggestion_crop_tip: "Rychlý tip: zvažte export do 4:3 nebo 3:2.",
+
+    // Error Boundary
+    error_something_wrong: "Něco se pokazilo",
+    error_unexpected: "Neočekávaná chyba",
+    error_reload: "Obnovit stránku",
+
+    // Home extras
+    home_powered_by: "Pohání Gemini 2.5 Pro",
+
+    // AI Command Center
+    aicc_title: "AI Řídicí centrum",
+    aicc_subtitle: "Náhled vedle sebe a AI analýza",
+    aicc_status: "Stav: základ",
+    aicc_source_file: "Zdrojový soubor",
+    aicc_no_files: "Žádné soubory",
+    aicc_original: "Originál",
+    aicc_ai_enhanced: "AI vylepšení",
+    aicc_ai_analysis: "AI analýza",
+    aicc_awaiting: "Čekám na analýzu…",
+    aicc_enhancement_modes: "Režimy vylepšení",
+    aicc_running: "Probíhá…",
+    aicc_run_autopilot: "Spustit autopilot",
+    aicc_recommendations: "AI doporučení",
+    aicc_rec_contrast: "Zvýšit kontrast pro dramatičtější dojem",
+    aicc_rec_crop: "Oříznout pro pravidlo třetin",
+    aicc_rec_vignette: "Přidat lehkou vinětaci pro fokus na subjekt",
+    aicc_style_presets: "Stylové presety",
+    aicc_mode_portrait: "Portrét",
+    aicc_mode_landscape: "Krajina",
+    aicc_mode_product: "Produkt",
+    aicc_mode_food: "Jídlo",
+    aicc_mode_realestate: "Nemovitosti",
+    aicc_mode_social: "Sociální sítě",
+    aicc_mode_cinematic: "Filmový",
+    aicc_mode_yourstyle: "Tvůj styl",
+    aicc_exposure: "Expozice",
+    aicc_colors: "Barvy",
+    aicc_sharpness: "Ostrost",
+    aicc_composition: "Kompozice",
+
+    // Presets
+    preset_soft_light: "Jemné světlo",
+    preset_vivid: "Výrazné",
+    preset_matte: "Matné",
+
+    // Batch extras
+    batch_analyzing: "Analyzuji kvalitu...",
+    batch_retouching: "Retušuji portréty...",
+    batch_retouch_done: "Portréty byly automaticky vyretušovány.",
+    batch_auto_rejected: "Automaticky zamítnuto",
+    batch_low_quality: "nekvalitních fotek.",
+    batch_culling_desc: "AI analyzuje ostrost, kompozici a výrazy. Automaticky označuje nejlepší záběry.",
+    batch_batch_desc: "Aplikujte úpravy na stovky fotek najednou. Inteligentní retuš a color grading.",
+    batch_analyze_quality: "Analyzovat Kvalitu",
+    batch_select_all_btn: "Vybrat Vše",
+
+    // Manual Edit extras
+    manual_quick_crop: "Rychlý ořez (Střed)",
+    manual_watermark: "Inteligentní Vodoznak",
+    manual_activate: "Aktivovat",
+    manual_wm_placeholder: "© Váš text",
+    manual_pos_bottom_right: "Vpravo dole",
+    manual_pos_bottom_left: "Vlevo dole",
+    manual_pos_center: "Střed",
+    manual_pos_tiled: "Opakovat (Tiled)",
+    manual_opacity: "Průhlednost",
+
+    // Upload extras
+    upload_support_detail: "Podporujeme <strong>JPG, PNG, WEBP</strong> a profesionální <strong>RAW</strong> formáty (CR2, NEF, ARW) s automatickou konverzí.",
+    upload_select_files: "Vybrat soubory",
+    upload_raw_converting: "Konverze RAW",
+
+    // Feedback
+    feedback_title: "Hodnocení AI výsledku",
+    feedback_dislike: "Nelíbí se mi (AI se z toho poučí)",
+    feedback_like: "Líbí se mi (Uložit preferenci)",
+    feedback_saved: "Preference uložena",
+    feedback_tuning: "Budeme ladit model",
+
+    // Misc UI
+    theme_toggle: "Přepnout téma",
+    loader_processing: "Zpracovávám",
+    header_open_menu: "Otevřít menu",
+    radial_quick_actions: "Rychlé akce",
+    loading: "Načítání..."
   },
   en: {
     app_title: "Fotograf AI",
@@ -391,7 +558,7 @@ const translations = {
     dashboard_recent: "Recent Actions",
     dashboard_no_recent: "No history yet.",
     dashboard_quick_autopilot: "Quick Autopilot",
-    dashboard_quick_culling: "Chytrý výběr",
+    dashboard_quick_culling: "Smart Culling",
 
     ai_gallery_search: "Search gallery...",
     ai_gallery_filter_all: "All",
@@ -421,7 +588,7 @@ const translations = {
     credits_low: "Not enough credits",
     credits_cost: "Cost",
     credits_buy: "Buy Credits",
-    
+
     store_title: "Credit Store",
     store_desc: "Unlock premium AI features. Credits are only deducted for successful generations.",
     store_pack_basic: "Starter",
@@ -430,7 +597,7 @@ const translations = {
     store_btn_buy: "Purchase",
     store_best_value: "Best Value",
     store_success: "Credits added successfully!",
-    
+
     onboarding_title: "Welcome to the Studio of the Future",
     onboarding_step1_title: "All in One Place",
     onboarding_step1_desc: "From RAW conversion to YouTube thumbnail generation. Photographer AI is your complete creative team.",
@@ -449,18 +616,18 @@ const translations = {
     turbo_express: "Turbo Workflow",
     turbo_express_desc: "One click: Autopilot + Crop + Social.",
     turbo_express_btn: "Run Turbo Workflow",
-    
+
     home_title: "Fotograf AI",
     home_subtitle: "Professional workflow for photographers. Save time, create art, and get done in a flash.",
     home_enter: "Enter Studio",
-    
+
     upload_title: "Upload Photos",
     upload_drag: "Drag & Drop photos here",
     upload_support: "Supports JPG, PNG, WEBP and",
     upload_raw: "RAW files will be automatically converted.",
     upload_btn: "Select Files",
     upload_processing: "Processing files...",
-    
+
     editor_no_image: "No image selected",
     editor_upload_hint: "Upload an image to start editing.",
     editor_analyzing: "Analyzing...",
@@ -468,13 +635,13 @@ const translations = {
     editor_suggestions: "Suggestions",
     editor_proactive: "Proactive Suggestions",
     editor_tech: "Technical Info",
-    
+
     tool_autopilot_desc: "Let AI automatically enhance your image.",
     tool_autopilot_btn: "Run Autopilot",
     tool_remove_desc: "Describe object to remove.",
     tool_remove_placeholder: "e.g. 'blue car'",
     tool_remove_btn: "Remove",
-    tool_crop_title: "Chytrý ořez",
+    tool_crop_title: "Smart Crop",
     tool_crop_instr: "AI Instructions",
     tool_crop_placeholder: "e.g. 'Crop to the face'",
     tool_crop_format: "Target Format",
@@ -504,7 +671,7 @@ const translations = {
     tool_youtube_text_ph: "e.g. SHOCKING TRUTH",
     tool_youtube_face: "Use current photo as face",
     tool_youtube_btn: "Generate Thumbnail",
-    
+
     manual_title: "Manual Edits",
     manual_reset: "Reset",
     manual_crop_active: "Manual Crop",
@@ -546,7 +713,7 @@ const translations = {
     gen_btn: "Generate",
     gen_generating: "Generating...",
     gen_add: "Add to Project",
-    
+
     raw_title: "RAW Converter",
     raw_subtitle: "Bulk RAW to JPEG conversion.",
     raw_convert: "Convert",
@@ -558,7 +725,7 @@ const translations = {
     raw_or_click: "or click",
     raw_select_other: "Select Other",
     raw_no_files: "No files selected.",
-    
+
     msg_api_missing: "Communication error with AI service.",
     msg_success: "Success.",
     msg_error: "Error.",
@@ -569,7 +736,174 @@ const translations = {
     compare_before: "Before",
     compare_after: "After",
     compare_btn: "Compare",
-    export_btn: "Export"
+    export_btn: "Export",
+
+    // Dashboard extras
+    dash_welcome_title: "Welcome to",
+    dash_welcome_studio: "the Studio",
+    dash_welcome_desc: "Your AI darkroom is ready. Upload photos and let AI take care of the rest.",
+    dash_new_project: "New Project",
+    dash_open_editor: "Open Editor",
+    dash_quick_tools: "Quick Tools",
+    dash_culling_desc: "Auto-select the best photos.",
+    dash_autopilot_desc: "One-click enhancement.",
+    dash_ai_generator: "AI Generator",
+    dash_gen_desc: "Create visuals from text.",
+    dash_recent_activity: "Recent Activity",
+    dash_show_all: "Show All",
+    dash_items_ago: "items • Just now",
+    dash_no_history: "No history yet.",
+    dash_available_credits: "Available Credits",
+    dash_plan_renewed: "Plan renewed",
+    dash_topup: "Top Up",
+
+    // API Key Modal
+    apikey_title: "API Key",
+    apikey_desc: "Enter your Google Gemini API key. It is stored locally in your browser only.",
+    apikey_label: "API Key",
+    apikey_stored: "Stored key",
+    apikey_update: "Update Key",
+    apikey_save: "Save Key",
+    apikey_delete: "Delete Key",
+    apikey_session_only: "Clear key when browser closes",
+    apikey_privacy: "Your API key stays in this browser only. We never send it to any server or GitHub.",
+    apikey_billing: "Billing information",
+
+    // Editor extras
+    editor_removing_bg: "Removing background...",
+    editor_replacing_bg: "Replacing background...",
+    editor_bg_replace: "Background Replacement",
+    editor_enhancing_faces: "Enhancing faces...",
+    editor_scoring: "Scoring quality...",
+    editor_ai_enhancing: "AI is analyzing and enhancing your image...",
+    editor_ai_crop_search: "AI is finding the best crop...",
+    editor_autocrop_ready: "Auto-crop ready (1–3)",
+    editor_style_saved: "Style saved: AI will learn your preferences.",
+    editor_style_saved_look: "Style saved! AI now knows your 'Look'.",
+    editor_selecting_subject: "Selecting main subject...",
+    editor_subject_selected: "Subject selected",
+    editor_quick_actions: "Quick actions:",
+    editor_basic_edit: "Basic Edit",
+    editor_retouch: "Retouch",
+    editor_auto_crop: "Auto Crop",
+    editor_remove_bg: "Remove Background",
+    editor_replace_bg: "Replace Background",
+    editor_select_subject: "Select Subject",
+    editor_enhance_face: "Enhance Face",
+    editor_score: "Score",
+    editor_preview: "Preview",
+    editor_ai_crop: "AI Crop",
+    editor_cancel: "Cancel",
+    editor_edit_log: "Edit Log",
+    editor_ai_recommendations: "AI Recommendations",
+    editor_looks_good: "Everything looks good.",
+    editor_ai_score: "AI Score",
+    editor_run: "Run",
+    editor_no_score: "No score yet.",
+    editor_learn_style: "Learn My Style",
+    editor_learn_style_desc: "Saves current settings as your personal AI signature.",
+    editor_ai_personalization: "AI Personalization",
+    editor_generating_thumbnail: "Gemini 3 Pro is designing a viral thumbnail...",
+    editor_close: "Close",
+    editor_bg_placeholder: "e.g. neon street in Tokyo, golden hour, studio backdrop",
+    editor_bg_cost: "Cost: 5 credits",
+    editor_shortcuts: "Shortcuts: 1, 2, 3",
+    editor_stop_compare: "Stop comparing",
+    editor_compare: "Compare",
+    editor_apply: "Apply",
+
+    // Suggestions
+    suggestion_lower_highlights: "Try lowering highlights to preserve details.",
+    suggestion_raise_shadows: "Raise shadows for more details.",
+    suggestion_raise_vibrance: "Increase vibrance for more natural saturation.",
+    suggestion_add_noise_reduction: "Add light noise reduction for a cleaner image.",
+    suggestion_raise_contrast: "Increase contrast for better dynamics.",
+    suggestion_crop_tip: "Quick tip: consider exporting in 4:3 or 3:2.",
+
+    // Error Boundary
+    error_something_wrong: "Something went wrong",
+    error_unexpected: "Unexpected error",
+    error_reload: "Reload page",
+
+    // Home extras
+    home_powered_by: "Powered by Gemini 2.5 Pro",
+
+    // AI Command Center
+    aicc_title: "AI Command Center",
+    aicc_subtitle: "Side-by-side preview and AI analysis",
+    aicc_status: "Status: base",
+    aicc_source_file: "Source file",
+    aicc_no_files: "No files",
+    aicc_original: "Original",
+    aicc_ai_enhanced: "AI enhanced",
+    aicc_ai_analysis: "AI analysis",
+    aicc_awaiting: "Awaiting analysis…",
+    aicc_enhancement_modes: "Enhancement modes",
+    aicc_running: "Running…",
+    aicc_run_autopilot: "Run autopilot",
+    aicc_recommendations: "AI Recommendations",
+    aicc_rec_contrast: "Increase contrast for more dramatic feel",
+    aicc_rec_crop: "Crop for rule of thirds",
+    aicc_rec_vignette: "Add light vignetting for subject focus",
+    aicc_style_presets: "Style presets",
+    aicc_mode_portrait: "Portrait",
+    aicc_mode_landscape: "Landscape",
+    aicc_mode_product: "Product",
+    aicc_mode_food: "Food",
+    aicc_mode_realestate: "Real Estate",
+    aicc_mode_social: "Social Media",
+    aicc_mode_cinematic: "Cinematic",
+    aicc_mode_yourstyle: "Your Style",
+    aicc_exposure: "Exposure",
+    aicc_colors: "Colors",
+    aicc_sharpness: "Sharpness",
+    aicc_composition: "Composition",
+
+    // Presets
+    preset_soft_light: "Soft Light",
+    preset_vivid: "Vivid",
+    preset_matte: "Matte",
+
+    // Batch extras
+    batch_analyzing: "Analyzing quality...",
+    batch_retouching: "Retouching portraits...",
+    batch_retouch_done: "Portraits have been auto-retouched.",
+    batch_auto_rejected: "Automatically rejected",
+    batch_low_quality: "low quality photos.",
+    batch_culling_desc: "AI analyzes sharpness, composition, and expressions. Automatically marks the best shots.",
+    batch_batch_desc: "Apply edits to hundreds of photos at once. Intelligent retouch and color grading.",
+    batch_analyze_quality: "Analyze Quality",
+    batch_select_all_btn: "Select All",
+
+    // Manual Edit extras
+    manual_quick_crop: "Quick Crop (Center)",
+    manual_watermark: "Smart Watermark",
+    manual_activate: "Activate",
+    manual_wm_placeholder: "© Your text",
+    manual_pos_bottom_right: "Bottom Right",
+    manual_pos_bottom_left: "Bottom Left",
+    manual_pos_center: "Center",
+    manual_pos_tiled: "Tiled",
+    manual_opacity: "Opacity",
+
+    // Upload extras
+    upload_support_detail: "We support <strong>JPG, PNG, WEBP</strong> and professional <strong>RAW</strong> formats (CR2, NEF, ARW) with automatic conversion.",
+    upload_select_files: "Select Files",
+    upload_raw_converting: "RAW conversion",
+
+    // Feedback
+    feedback_title: "Rate AI result",
+    feedback_dislike: "Dislike (AI will learn)",
+    feedback_like: "Like (Save preference)",
+    feedback_saved: "Preference saved",
+    feedback_tuning: "We'll tune the model",
+
+    // Misc UI
+    theme_toggle: "Toggle theme",
+    loader_processing: "Processing",
+    header_open_menu: "Open menu",
+    radial_quick_actions: "Quick actions",
+    loading: "Loading..."
   }
 };
 

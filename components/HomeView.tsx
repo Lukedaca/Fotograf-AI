@@ -54,7 +54,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onEnterApp }) => {
         </div>
 
         <div className="mt-16 flex items-center gap-4 opacity-60">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Pohání Gemini 2.5 Pro</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">{t.home_powered_by}</span>
           <div className="w-1 h-1 bg-border-subtle"></div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-text-secondary">Imagen 4.0 Studio</span>
         </div>

@@ -76,7 +76,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
 
   const handleRunCulling = async () => {
       if (files.length === 0) return;
-      setProcessingAction('Analyzuji kvalitu...');
+      setProcessingAction(t.batch_analyzing);
       setIsProcessing(true);
       setProgress({ current: 0, total: files.length });
       
@@ -107,7 +107,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
 
   const handleSmartRetouch = async () => {
       if (selectedFiles.length === 0) return;
-      setProcessingAction('Retušuji portréty...');
+      setProcessingAction(t.batch_retouching);
       setIsProcessing(true);
       setProgress({ current: 0, total: selectedFiles.length });
 
@@ -127,7 +127,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
       setProcessingAction(null);
       if (updatedFiles.length > 0) {
           onBatchComplete(updatedFiles);
-          addNotification('Portréty byly automaticky vyretušovány.', 'info');
+          addNotification(t.batch_retouch_done, 'info');
       }
   };
 
@@ -139,7 +139,7 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
       // Invert selection: Select only good ones
       const goodIds = new Set(files.filter(f => !rejectedIds.has(f.id)).map(f => f.id));
       setSelectedFileIds(goodIds);
-      addNotification(`Automaticky zamítnuto ${rejectedIds.size} nekvalitních fotek.`, 'info');
+      addNotification(`${t.batch_auto_rejected} ${rejectedIds.size} ${t.batch_low_quality}`, 'info');
   };
 
   return (
@@ -162,9 +162,9 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
                     {mode === 'culling' ? 'Culling Mode' : 'Batch Mode'}
                 </h2>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                    {mode === 'culling' 
-                        ? 'AI analyzuje ostrost, kompozici a výrazy. Automaticky označuje nejlepší záběry.' 
-                        : 'Aplikujte úpravy na stovky fotek najednou. Inteligentní retuš a color grading.'}
+                    {mode === 'culling'
+                        ? t.batch_culling_desc
+                        : t.batch_batch_desc}
                 </p>
             </div>
 
@@ -174,16 +174,16 @@ const BatchView: React.FC<BatchViewProps> = ({ files, onBatchComplete, onSetFile
                 
                 {mode === 'culling' ? (
                     <>
-                        <button 
-                            onClick={handleRunCulling} 
+                        <button
+                            onClick={handleRunCulling}
                             disabled={isProcessing}
                             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-900 to-blue-900 border border-blue-800/50 hover:border-blue-500 text-white text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                         >
-                            <SparklesIcon className="w-4 h-4" /> Analyzovat Kvalitu
+                            <SparklesIcon className="w-4 h-4" /> {t.batch_analyze_quality}
                         </button>
                         
                         <div className="grid grid-cols-2 gap-2">
-                             <button onClick={() => setSelectedFileIds(new Set(files.map(f => f.id)))} className="py-2 bg-[#1a1a1a] rounded-lg border border-[#333] hover:bg-[#252525] text-[10px] text-gray-300 font-bold uppercase">Vybrat Vše</button>
+                             <button onClick={() => setSelectedFileIds(new Set(files.map(f => f.id)))} className="py-2 bg-[#1a1a1a] rounded-lg border border-[#333] hover:bg-[#252525] text-[10px] text-gray-300 font-bold uppercase">{t.batch_select_all_btn}</button>
                              <button onClick={handleAutoReject} className="py-2 bg-[#1a1a1a] rounded-lg border border-[#333] hover:border-red-900 hover:text-red-400 text-[10px] text-gray-300 font-bold uppercase">Auto-Reject Low</button>
                         </div>
                     </>

@@ -53,18 +53,18 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                         <KeyIcon className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                        <h2 className="text-xl heading">API klíč</h2>
+                        <h2 className="text-xl heading">{t.apikey_title}</h2>
                         <p className="text-xs text-text-secondary uppercase tracking-widest">Google Gemini API</p>
                     </div>
                 </div>
 
                 <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-                    Zadejte API klíč pro Google Gemini. Uloží se pouze lokálně v prohlížeči.
+                    {t.apikey_desc}
                 </p>
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="block text-xs text-text-secondary uppercase tracking-widest">API klíč</label>
+                        <label className="block text-xs text-text-secondary uppercase tracking-widest">{t.apikey_label}</label>
                         <input
                             type="password"
                             value={apiKeyInput}
@@ -73,7 +73,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                             className="w-full bg-elevated border border-border-subtle px-4 py-3 text-sm text-text-primary outline-none"
                         />
                         {storedKey && (
-                            <p className="text-[11px] text-success">Uložený klíč: ••••••••{storedKey.slice(-4)}</p>
+                            <p className="text-[11px] text-success">{t.apikey_stored}: ••••••••{storedKey.slice(-4)}</p>
                         )}
                     </div>
 
@@ -82,7 +82,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                             onClick={handleSave}
                             className="py-3 text-xs"
                         >
-                            {storedKey ? 'Aktualizovat klíč' : 'Uložit klíč'}
+                            {storedKey ? t.apikey_update : t.apikey_save}
                         </Button>
                         <Button
                             onClick={handleClear}
@@ -90,7 +90,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                             className="py-3 text-xs"
                             disabled={!storedKey}
                         >
-                            Smazat klíč
+                            {t.apikey_delete}
                         </Button>
                     </div>
 
@@ -105,15 +105,15 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose }) => {
                                     setSessionOnly(next);
                                 }}
                             />
-                            Vymazat klíč po zavření prohlížeče
+                            {t.apikey_session_only}
                         </label>
                         <div className="text-[11px] text-text-secondary leading-relaxed border border-border-subtle p-3 bg-elevated">
-                            Váš API klíč zůstává pouze v tomto prohlížeči. Nikdy ho neodesíláme na server ani na GitHub.
+                            {t.apikey_privacy}
                         </div>
                     </div>
 
                     <div className="mt-6 text-center text-xs text-text-secondary">
-                        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-accent hover:underline">Informace o účtování</a>
+                        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-accent hover:underline">{t.apikey_billing}</a>
                     </div>
                 </div>
             </div>
