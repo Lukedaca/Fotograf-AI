@@ -696,6 +696,8 @@ Text: ${thumbnailText}`,
         )}
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+          {/* Left column: Viewport + Filmstrip */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {/* Viewport */}
             <div
               className="flex-1 bg-surface/60 relative overflow-hidden flex items-center justify-center p-6"
@@ -869,6 +871,7 @@ Text: ${thumbnailText}`,
                 </div>
               </div>
             )}
+          </div>{/* End left column */}
 
             {/* Controls Sidebar */}
             <AnimatePresence>
