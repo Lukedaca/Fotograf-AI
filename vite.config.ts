@@ -25,6 +25,17 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        sourcemap: false,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+              motion: ['framer-motion'],
+            },
+          },
+        },
+      },
     };
 });

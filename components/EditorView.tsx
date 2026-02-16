@@ -45,6 +45,7 @@ interface EditorViewProps {
   onToggleSidebar: () => void;
   credits: number;
   onDeductCredits: (amount: number) => Promise<boolean>;
+  onBuyCredits?: () => void;
   currentProjectId?: string | null;
 }
 
@@ -424,7 +425,6 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   useEffect(() => {
       if (!isVoiceActive) return;
 
-      // @ts-ignore
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
           addNotification('Voice recognition not supported in this browser', 'error');
@@ -906,6 +906,18 @@ Text: ${thumbnailText}`,
                                 <SparklesIcon className="w-5 h-5" />
                                 {trans.tool_youtube_btn}
                             </button>
+                            {activeFile && (
+                                <div className="pt-4 border-t border-border-subtle space-y-3">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Export</h4>
+                                    <button
+                                        onClick={handleManualExport}
+                                        className="w-full py-3 bg-accent text-void text-sm font-bold border border-accent rounded-xl flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <ExportIcon className="w-4 h-4" />
+                                        {trans.export_btn || 'Stáhnout'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

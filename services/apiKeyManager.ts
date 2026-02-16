@@ -31,12 +31,23 @@ export const apiKeyManager = {
     return localStorage.getItem(SESSION_ONLY_KEY) === '1';
   },
 
+  _beforeUnloadHandler: null as (() => void) | null,
+
   enableSessionOnlyAutoClear(): void {
-    window.addEventListener('beforeunload', () => {
+    if (this._beforeUnloadHandler) return;
+    this._beforeUnloadHandler = () => {
       if (this.isSessionOnly()) {
         this.clear();
       }
-    });
+    };
+    window.addEventListener('beforeunload', this._beforeUnloadHandler);
+  },
+
+  disableSessionOnlyAutoClear(): void {
+    if (this._beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+      this._beforeUnloadHandler = null;
+    }
   },
 
   clearLegacyKeys(): void {

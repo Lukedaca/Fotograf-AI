@@ -5,7 +5,7 @@ interface MagneticButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
   strength?: number;
 }
 
-const MagneticButton: React.FC<MagneticButtonProps> = ({ strength = 18, children, ...props }) => {
+const MagneticButton: React.FC<MagneticButtonProps> = ({ strength = 18, children, className, style, onClick, disabled, ...rest }) => {
   const ref = useRef<HTMLButtonElement>(null);
 
   const handleMove = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -27,8 +27,10 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({ strength = 18, children
       ref={ref}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className="transition-transform duration-150"
-      {...props}
+      className={`transition-transform duration-150 ${className || ''}`}
+      style={style}
+      onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </motion.button>

@@ -4,7 +4,7 @@ import { generateImage } from '../services/geminiService';
 import { base64ToFile } from '../utils/imageProcessor';
 import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
 import type { AIGalleryType } from '../types';
-import { GenerateImageIcon, UploadIcon, XIcon, SparklesIcon } from './icons';
+import { GenerateImageIcon, UploadIcon, XIcon, SparklesIcon, ExportIcon } from './icons';
 import Header from './Header';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -99,6 +99,16 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
         }
     };
 
+    const handleDownload = () => {
+        if (!generatedImage) return;
+        const link = document.createElement('a');
+        link.href = generatedImage;
+        link.download = `${prompt.substring(0, 30).replace(/\s/g, '_') || 'generated'}.jpeg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleAddToProject = async () => {
         if (!generatedImage) return;
         try {
@@ -168,13 +178,22 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
                                             <button onClick={() => setIsLightboxOpen(true)} className="flex-1 w-full h-full cursor-pointer group focus:outline-none">
                                                 <img src={generatedImage} alt="Vygenerovaný" className="w-full h-full object-contain transition-none" />
                                             </button>
-                                            <button
-                                                onClick={handleAddToProject}
-                                                className="mt-4 w-full inline-flex items-center justify-center px-4 py-2.5 border border-border-subtle text-sm font-medium text-text-primary bg-surface transition-none"
-                                            >
-                                                <UploadIcon className="-ml-1 mr-2 h-5 w-5" />
-                                                {t.gen_add}
-                                            </button>
+                                            <div className="mt-4 flex gap-2">
+                                                <button
+                                                    onClick={handleDownload}
+                                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-accent text-sm font-semibold text-void bg-accent transition-none"
+                                                >
+                                                    <ExportIcon className="-ml-1 mr-2 h-5 w-5" />
+                                                    {t.export_btn || 'Export'}
+                                                </button>
+                                                <button
+                                                    onClick={handleAddToProject}
+                                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 border border-border-subtle text-sm font-medium text-text-primary bg-surface transition-none"
+                                                >
+                                                    <UploadIcon className="-ml-1 mr-2 h-5 w-5" />
+                                                    {t.gen_add}
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                     {!isLoading && !generatedImage && (

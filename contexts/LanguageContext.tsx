@@ -284,7 +284,8 @@ const translations = {
 
     compare_before: "Před",
     compare_after: "Po",
-    compare_btn: "Porovnat"
+    compare_btn: "Porovnat",
+    export_btn: "Stáhnout"
   },
   en: {
     app_title: "Fotograf AI",
@@ -567,7 +568,8 @@ const translations = {
 
     compare_before: "Before",
     compare_after: "After",
-    compare_btn: "Compare"
+    compare_btn: "Compare",
+    export_btn: "Export"
   }
 };
 
