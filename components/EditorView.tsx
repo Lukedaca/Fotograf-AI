@@ -794,6 +794,40 @@ Text: ${thumbnailText}`,
                         <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
                 )}
+
+                {/* Filmstrip - photo switcher */}
+                {!isYouTubeMode && files.length > 1 && (
+                  <div className="absolute bottom-0 left-0 right-0 z-30 bg-void/80 backdrop-blur-md border-t border-border-subtle">
+                    <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto custom-scrollbar">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-1 flex-shrink-0">
+                        {files.findIndex(f => f.id === activeFileId) + 1}/{files.length}
+                      </span>
+                      {files.map((f, idx) => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            onSetActiveFileId(f.id);
+                            setManualEdits(INITIAL_EDITS);
+                            setAutoCropSuggestions([]);
+                            setAutoCropImageSize(null);
+                            setQualityAssessment(f.assessment || null);
+                          }}
+                          className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                            f.id === activeFileId
+                              ? 'border-accent shadow-lg shadow-accent/20'
+                              : 'border-border-subtle opacity-60 hover:opacity-100 hover:border-text-secondary'
+                          }`}
+                        >
+                          <img
+                            src={f.previewUrl}
+                            alt={f.file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
 
             {/* Controls Sidebar */}
