@@ -696,8 +696,6 @@ Text: ${thumbnailText}`,
         )}
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-          {/* Left column: Viewport + Filmstrip */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {/* Viewport */}
             <div
               className="flex-1 bg-surface/60 relative overflow-hidden flex items-center justify-center p-6"
@@ -817,61 +815,6 @@ Text: ${thumbnailText}`,
                 )}
 
             </div>
-
-            {/* Filmstrip - photo switcher */}
-            {!isYouTubeMode && files.length > 1 && (
-              <div className="flex-shrink-0 bg-void border-t border-border-subtle">
-                <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto custom-scrollbar">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-1 flex-shrink-0">
-                    {files.findIndex(f => f.id === activeFileId) + 1}/{files.length}
-                  </span>
-                  {files.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => {
-                        if (f.id === activeFileId) return;
-                        switchToFile(f);
-                      }}
-                      className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                        f.id === activeFileId
-                          ? 'border-accent shadow-lg shadow-accent/20 scale-105'
-                          : 'border-border-subtle opacity-60 hover:opacity-100 hover:border-text-secondary'
-                      }`}
-                    >
-                      <img
-                        src={f.previewUrl}
-                        alt={f.file.name}
-                        className="w-full h-full object-cover"
-                        draggable={false}
-                      />
-                    </button>
-                  ))}
-                  <div className="flex-shrink-0 flex items-center gap-1 ml-2">
-                    <button
-                      onClick={() => {
-                        const idx = files.findIndex(f => f.id === activeFileId);
-                        if (idx > 0) switchToFile(files[idx - 1]);
-                      }}
-                      disabled={files.findIndex(f => f.id === activeFileId) <= 0}
-                      className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const idx = files.findIndex(f => f.id === activeFileId);
-                        if (idx < files.length - 1) switchToFile(files[idx + 1]);
-                      }}
-                      disabled={files.findIndex(f => f.id === activeFileId) >= files.length - 1}
-                      className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>{/* End left column */}
 
             {/* Controls Sidebar */}
             <AnimatePresence>
@@ -1037,6 +980,60 @@ Text: ${thumbnailText}`,
             )}
             </AnimatePresence>
         </div>
+
+        {/* Filmstrip - photo switcher (top-level, always visible) */}
+        {!isFocusMode && !isYouTubeMode && files.length > 1 && (
+          <div className="flex-shrink-0 bg-void border-t border-b border-border-subtle">
+            <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto custom-scrollbar">
+              <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-1 flex-shrink-0">
+                {files.findIndex(f => f.id === activeFileId) + 1}/{files.length}
+              </span>
+              {files.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    if (f.id === activeFileId) return;
+                    switchToFile(f);
+                  }}
+                  className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                    f.id === activeFileId
+                      ? 'border-accent shadow-lg shadow-accent/20 scale-105'
+                      : 'border-border-subtle opacity-60 hover:opacity-100 hover:border-text-secondary'
+                  }`}
+                >
+                  <img
+                    src={f.previewUrl}
+                    alt={f.file.name}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+              <div className="flex-shrink-0 flex items-center gap-1 ml-2">
+                <button
+                  onClick={() => {
+                    const idx = files.findIndex(f => f.id === activeFileId);
+                    if (idx > 0) switchToFile(files[idx - 1]);
+                  }}
+                  disabled={files.findIndex(f => f.id === activeFileId) <= 0}
+                  className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button
+                  onClick={() => {
+                    const idx = files.findIndex(f => f.id === activeFileId);
+                    if (idx < files.length - 1) switchToFile(files[idx + 1]);
+                  }}
+                  disabled={files.findIndex(f => f.id === activeFileId) >= files.length - 1}
+                  className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence>
           {!isFocusMode && !isYouTubeMode && activeFile && (
