@@ -54,7 +54,7 @@ const UploadView: React.FC<UploadViewProps> = ({
           const file = incomingFiles[i];
           if (isRawFile(file)) {
               rawCount++;
-              setProcessingStatus(`Konverze RAW: ${file.name} (${rawCount}...)`);
+              setProcessingStatus(`${t.upload_raw_converting}: ${file.name} (${rawCount}...)`);
               try {
                   const convertedFile = await processRawFile(file);
                   finalFiles.push(convertedFile);
@@ -145,8 +145,7 @@ const UploadView: React.FC<UploadViewProps> = ({
                 <h3 className="mt-4 text-3xl font-extrabold tracking-tight text-white mb-2">
                   {t.upload_drag}
                 </h3>
-                <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-                  Podporujeme <strong>JPG, PNG, WEBP</strong> a profesionální <strong>RAW</strong> formáty (CR2, NEF, ARW) s automatickou konverzí.
+                <p className="mt-2 text-sm text-gray-400 max-w-md mx-auto leading-relaxed" dangerouslySetInnerHTML={{__html: t.upload_support_detail}}>
                 </p>
                 
                 <div className="mt-10">
@@ -164,7 +163,7 @@ const UploadView: React.FC<UploadViewProps> = ({
                     className="inline-flex items-center px-8 py-4 bg-white text-black text-sm font-bold rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-105"
                   >
                     <UploadIcon className="-ml-1 mr-3 h-5 w-5" />
-                    Vybrat soubory
+                    {t.upload_select_files}
                   </button>
                 </div>
                 

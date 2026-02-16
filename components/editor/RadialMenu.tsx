@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../../contexts/LanguageContext';
 
 interface RadialMenuItem {
   id: string;
@@ -15,6 +16,8 @@ interface RadialMenuProps {
 }
 
 const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, items, onClose }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <motion.div
@@ -27,7 +30,7 @@ const RadialMenu: React.FC<RadialMenuProps> = ({ x, y, items, onClose }) => {
         style={{ left: x, top: y }}
       >
         <div className="border border-border-subtle bg-surface p-3 min-w-[180px]">
-          <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-2">Rychlé akce</div>
+          <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-2">{t.radial_quick_actions}</div>
           <div className="flex flex-col gap-2">
             {items.map((item) => (
               <button

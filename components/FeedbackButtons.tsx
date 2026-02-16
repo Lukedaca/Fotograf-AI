@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ThumbsUpIcon, ThumbsDownIcon } from './icons';
 import type { Feedback } from '../types';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface FeedbackButtonsProps {
   onFeedback: (feedback: Feedback) => void;
@@ -9,6 +10,7 @@ interface FeedbackButtonsProps {
 }
 
 const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout }) => {
+  const { t } = useTranslation();
   const [isFading, setIsFading] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState<Feedback | null>(null);
 
@@ -37,7 +39,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
   return (
     <div className={`transition-all duration-500 transform ${isFading ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
         <div className="flex flex-col items-center gap-3 bg-surface px-6 py-4 border border-border-subtle">
-            <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">Hodnocení AI výsledku</p>
+            <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">{t.feedback_title}</p>
             
             <div className="flex items-center gap-6">
                 {/* DISLIKE BUTTON - RED */}
@@ -51,7 +53,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                                 ? 'opacity-20 grayscale'
                                 : 'hover:scale-105 opacity-80 hover:opacity-100'
                     }`}
-                    title="Nelíbí se mi (AI se z toho poučí)"
+                    title={t.feedback_dislike_title}
                 >
                     <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'bad'
@@ -75,7 +77,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                                 ? 'opacity-20 grayscale'
                                 : 'hover:scale-105 opacity-80 hover:opacity-100'
                     }`}
-                    title="Líbí se mi (Uložit preferenci)"
+                    title={t.feedback_like_title}
                 >
                     <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'good'
@@ -90,7 +92,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
             {feedbackGiven && (
                 <div className="mt-1 px-3 py-1 bg-elevated border border-border-subtle animate-fade-in-up">
                     <p className={`text-xs font-medium ${feedbackGiven === 'good' ? 'text-success' : 'text-error'}`}>
-                        {feedbackGiven === 'good' ? 'Preference uložena' : 'Budeme ladit model'}
+                        {feedbackGiven === 'good' ? t.feedback_saved : t.feedback_tuning}
                     </p>
                 </div>
             )}

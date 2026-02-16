@@ -57,14 +57,14 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
 
   const modes: { id: EnhancementMode; label: string }[] = [
     { id: 'auto', label: 'Auto' },
-    { id: 'portrait', label: 'Portrét' },
-    { id: 'landscape', label: 'Krajina' },
-    { id: 'product', label: 'Produkt' },
-    { id: 'food', label: 'Jídlo' },
-    { id: 'real-estate', label: 'Nemovitosti' },
-    { id: 'social-media', label: 'Sociální sítě' },
-    { id: 'cinematic', label: 'Filmový' },
-    { id: 'your-style', label: 'Tvůj styl' },
+    { id: 'portrait', label: t.aicc_mode_portrait },
+    { id: 'landscape', label: t.aicc_mode_landscape },
+    { id: 'product', label: t.aicc_mode_product },
+    { id: 'food', label: t.aicc_mode_food },
+    { id: 'real-estate', label: t.aicc_mode_realestate },
+    { id: 'social-media', label: t.aicc_mode_social },
+    { id: 'cinematic', label: t.aicc_mode_cinematic },
+    { id: 'your-style', label: t.aicc_mode_yourstyle },
   ];
 
   const handleRun = useCallback(async () => {
@@ -81,7 +81,7 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
           if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
           return url;
         });
-        onSetFiles(current => current.map(f => f.id === activeFile.id ? { ...f, file: result.enhancedFile!, previewUrl: url } : f), 'AI Řídicí centrum');
+        onSetFiles(current => current.map(f => f.id === activeFile.id ? { ...f, file: result.enhancedFile!, previewUrl: url } : f), t.aicc_title);
       }
       addNotification(t.msg_success, 'info');
     } catch (e) {
@@ -110,19 +110,19 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
           <div className="border border-border-subtle bg-surface p-5">
             <div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-3">
               <div>
-                <h2 className="text-2xl heading">AI Řídicí centrum</h2>
-                <p className="text-xs text-text-secondary uppercase tracking-widest">Náhled vedle sebe a AI analýza</p>
+                <h2 className="text-2xl heading">{t.aicc_title}</h2>
+                <p className="text-xs text-text-secondary uppercase tracking-widest">{t.aicc_subtitle}</p>
               </div>
-              <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">Stav: základ</span>
+              <span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">{t.aicc_status}</span>
             </div>
             <div className="mb-4">
-              <label className="text-[11px] text-text-secondary uppercase tracking-widest">Zdrojový soubor</label>
+              <label className="text-[11px] text-text-secondary uppercase tracking-widest">{t.aicc_source_file}</label>
               <select
                 value={activeFileId || ''}
                 onChange={(e) => onSetActiveFileId(e.target.value)}
                 className="mt-2 w-full bg-elevated border border-border-subtle px-3 py-2 text-xs text-text-primary"
               >
-                {files.length === 0 && <option value="">Žádné soubory</option>}
+                {files.length === 0 && <option value="">{t.aicc_no_files}</option>}
                 {files.map((file) => (
                   <option key={file.id} value={file.id}>
                     {file.file.name}
@@ -138,16 +138,16 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="aspect-[4/3] border border-border-subtle bg-elevated flex items-center justify-center text-text-secondary text-sm overflow-hidden">
                   {activeFile ? (
-                    <img src={activeFile.originalPreviewUrl} alt="Originál" className="w-full h-full object-contain" />
+                    <img src={activeFile.originalPreviewUrl} alt={t.aicc_original} className="w-full h-full object-contain" />
                   ) : (
-                    'Originál'
+                    t.aicc_original
                   )}
                 </div>
                 <div className="aspect-[4/3] border border-border-subtle bg-elevated flex items-center justify-center text-text-secondary text-sm overflow-hidden">
                   {enhancedPreviewUrl ? (
-                    <img src={enhancedPreviewUrl} alt="AI vylepšení" className="w-full h-full object-contain" />
+                    <img src={enhancedPreviewUrl} alt={t.aicc_ai_enhanced} className="w-full h-full object-contain" />
                   ) : (
-                    'AI vylepšení'
+                    t.aicc_ai_enhanced
                   )}
                 </div>
               </div>
@@ -155,13 +155,13 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
           </div>
 
           <div className="border border-border-subtle bg-surface p-5">
-            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-4">AI analýza</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-4">{t.aicc_ai_analysis}</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              {['Expozice', 'Barvy', 'Ostrost', 'Kompozice'].map((item) => (
+              {[t.aicc_exposure, t.aicc_colors, t.aicc_sharpness, t.aicc_composition].map((item) => (
                 <div key={item} className="border border-border-subtle bg-elevated p-4">
                   <div className="text-xs text-text-secondary">{item}</div>
                   <div className="text-lg font-bold text-text-primary mt-2">—</div>
-                  <div className="text-[11px] text-text-secondary mt-2">Čekám na analýzu…</div>
+                  <div className="text-[11px] text-text-secondary mt-2">{t.aicc_awaiting}</div>
                 </div>
               ))}
             </div>
@@ -170,7 +170,7 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
 
         <div className="flex flex-col gap-6">
           <div className="border border-border-subtle bg-surface p-5">
-            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-4">Režimy vylepšení</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-4">{t.aicc_enhancement_modes}</h3>
             <div className="grid grid-cols-2 gap-3">
               {modes.map((option) => (
                 <button
@@ -193,33 +193,33 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
               onClick={handleRun}
             >
               <SparklesIcon className="w-4 h-4" />
-              {isRunning ? 'Probíhá…' : 'Spustit autopilot'}
+              {isRunning ? t.aicc_running : t.aicc_run_autopilot}
             </MagneticButton>
             <p className="text-[11px] text-text-secondary mt-3">{t.credits_cost}: 3</p>
           </div>
 
           <div className="border border-border-subtle bg-surface p-5">
-            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-3">AI doporučení</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-3">{t.aicc_recommendations}</h3>
             <div className="space-y-3 text-sm text-text-secondary">
               <div className="border border-border-subtle bg-elevated p-3">
-                • Zvýšit kontrast pro dramatičtější dojem
+                • {t.aicc_rec_contrast}
               </div>
               <div className="border border-border-subtle bg-elevated p-3">
-                • Oříznout pro pravidlo třetin
+                • {t.aicc_rec_crop}
               </div>
               <div className="border border-border-subtle bg-elevated p-3">
-                • Přidat lehkou vinětaci pro fokus na subjekt
+                • {t.aicc_rec_vignette}
               </div>
             </div>
           </div>
 
           <div className="border border-border-subtle bg-surface p-5">
-            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-3">Stylové presety</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary mb-3">{t.aicc_style_presets}</h3>
             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
               {(stylePresets.length > 0 ? stylePresets : [
-                { id: 'default-1', name: 'Jemné světlo' },
-                { id: 'default-2', name: 'Výrazné' },
-                { id: 'default-3', name: 'Matné' },
+                { id: 'default-1', name: t.preset_soft_light },
+                { id: 'default-2', name: t.preset_vivid },
+                { id: 'default-3', name: t.preset_matte },
               ]).map((preset) => (
                 <div key={preset.id} className="min-w-[140px] border border-border-subtle bg-elevated p-4 text-xs text-text-secondary">
                   <div className="text-text-primary font-bold mb-2">{preset.name}</div>

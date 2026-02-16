@@ -110,7 +110,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           </button>
 
           <div className="pt-2 border-t border-border-subtle/50">
-            <label className="text-xs text-text-secondary mb-1 block">Rychlý ořez (Střed)</label>
+            <label className="text-xs text-text-secondary mb-1 block">{t.manual_quick_crop}</label>
             <div className="grid grid-cols-5 gap-1">
                 {ASPECT_RATIOS.map((ratio) => (
                     <button
@@ -152,7 +152,7 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           <button onClick={() => setShowWatermark(!showWatermark)} className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
                 <WatermarkIcon className="w-4 h-4 text-accent" />
-                <label className="text-sm font-medium text-text-primary">Inteligentní Vodoznak</label>
+                <label className="text-sm font-medium text-text-primary">{t.manual_watermark}</label>
             </div>
             <span className="text-xs text-text-secondary">{showWatermark ? '▼' : '▶'}</span>
           </button>
@@ -160,16 +160,16 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
           {showWatermark && (
               <div className="space-y-3 pt-2 animate-fade-in">
                   <div className="flex items-center justify-between">
-                     <span className="text-xs text-text-secondary">Aktivovat</span>
+                     <span className="text-xs text-text-secondary">{t.manual_activate}</span>
                      <input type="checkbox" checked={edits.watermark?.enabled || false} onChange={(e) => updateWatermark({ enabled: e.target.checked })} />
                   </div>
                   {edits.watermark?.enabled && (
                       <>
-                        <input 
-                            type="text" 
-                            value={edits.watermark?.text || ''} 
+                        <input
+                            type="text"
+                            value={edits.watermark?.text || ''}
                             onChange={(e) => updateWatermark({ text: e.target.value })}
-                            placeholder="© Váš text"
+                            placeholder={t.manual_wm_placeholder}
                             className="w-full bg-surface border border-border-subtle rounded p-2 text-xs text-white"
                         />
                         <div className="grid grid-cols-2 gap-2">
@@ -179,19 +179,19 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                                 onChange={(e) => updateWatermark({ color: e.target.value })}
                                 className="w-full h-8 bg-transparent cursor-pointer"
                              />
-                             <select 
+                             <select
                                 value={edits.watermark?.position || 'bottom-right'}
                                 onChange={(e) => updateWatermark({ position: e.target.value as any })}
                                 className="bg-surface border border-border-subtle rounded text-xs text-white"
                              >
-                                 <option value="bottom-right">Vpravo dole</option>
-                                 <option value="bottom-left">Vlevo dole</option>
-                                 <option value="center">Střed</option>
-                                 <option value="tiled">Opakovat (Tiled)</option>
+                                 <option value="bottom-right">{t.manual_pos_bottom_right}</option>
+                                 <option value="bottom-left">{t.manual_pos_bottom_left}</option>
+                                 <option value="center">{t.manual_pos_center}</option>
+                                 <option value="tiled">{t.manual_pos_tiled}</option>
                              </select>
                         </div>
                         <div className="space-y-1">
-                             <label className="text-[10px] text-text-secondary">Průhlednost</label>
+                             <label className="text-[10px] text-text-secondary">{t.manual_opacity}</label>
                              <input type="range" min="10" max="100" value={edits.watermark?.opacity || 50} onChange={(e) => updateWatermark({ opacity: Number(e.target.value) })} className="custom-slider h-1" />
                         </div>
                       </>
