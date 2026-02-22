@@ -1,0 +1,9 @@
+{
+  "llm": "groq",
+  "model": "llama-3.3-70b-versatile",
+  "api_key": "",
+  "max_steps": 10,
+  "tools": ["bash", "file_read", "file_write", "web_search"],
+  "work_dir": "C:\\Users\\Intel",
+  "safe_mode": true
+}
