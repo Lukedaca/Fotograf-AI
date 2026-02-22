@@ -167,7 +167,7 @@ TOOLS_SCHEMA = [
 SYSTEM_PROMPT = """Jsi autonomní AI agent. Dostaneš task a musíš ho splnit krok po kroku pomocí nástrojů.
 
 Pravidla:
-1. Nejdřív napiš krátký plán (max 3-5 kroků) ve formátu: [PLAN] krok1, krok2, krok3
+1. Nejdřív napiš krátký plán (max 3-5 kroků) ve formátu: [PLAN] krok1 | krok2 | krok3
 2. Pak prováděj kroky pomocí tool calls
 3. Každý krok oznám: [STEP X/N] co děláš
 4. Po tool callu okomentuj výsledek
