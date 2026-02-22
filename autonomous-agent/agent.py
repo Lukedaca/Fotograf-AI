@@ -70,7 +70,7 @@ def tool_file_write(path: str, content: str) -> str:
     try:
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content, encoding="utf-8")
+        p.write_text(content, encoding="utf-8", errors="replace")
         return f"[OK] Soubor uložen: {path} ({len(content)} znaků)"
     except Exception as e:
         return f"[ERROR] {e}"
@@ -207,13 +207,17 @@ def run_agent(task: str, config: dict) -> None:
     emit(f"[TASK] {task}")
 
     for _step in range(max_steps):
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=TOOLS_SCHEMA,
-            tool_choice="auto",
-            max_tokens=1024,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=TOOLS_SCHEMA,
+                tool_choice="auto",
+                max_tokens=1024,
+            )
+        except Exception as e:
+            emit(f"[ERROR] Groq API selhal: {e}")
+            break
 
         msg = response.choices[0].message
 
@@ -221,9 +225,6 @@ def run_agent(task: str, config: dict) -> None:
             for line in msg.content.strip().split("\n"):
                 if line.strip():
                     emit(line)
-
-        if msg.content and "[DONE]" in msg.content:
-            break
 
         if not msg.tool_calls:
             break
@@ -270,6 +271,9 @@ def run_agent(task: str, config: dict) -> None:
                 "tool_call_id": tc.id,
                 "content": result,
             })
+
+        if msg.content and "[DONE]" in msg.content:
+            break
     else:
         emit("[INFO] Dosažen maximální počet kroků.")
 
