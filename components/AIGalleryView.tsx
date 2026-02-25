@@ -4,6 +4,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useProject } from '../contexts/ProjectContext';
 import type { AIGalleryAsset, AIGalleryType, UploadedFile } from '../types';
 import { deleteAIGalleryAsset, listAIGalleryAssets } from '../utils/aiGallery';
+import { ExportIcon } from './icons';
 
 interface AIGalleryViewProps {
   title: string;
@@ -81,6 +82,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
   };
 
   const handleDownload = (item: AIGalleryAsset) => {
+    if (!item.blob) return;
     const url = URL.createObjectURL(item.blob);
     const link = document.createElement('a');
     link.href = url;
@@ -88,7 +90,7 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   const handleAddToProject = (item: AIGalleryAsset) => {
@@ -153,19 +155,26 @@ const AIGalleryView: React.FC<AIGalleryViewProps> = ({ title, onToggleSidebar, o
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filteredItems.map((item) => (
-              <button
+              <div
                 key={item.id}
-                onClick={() => setSelectedId(item.id)}
-                className={`relative aspect-[4/3] rounded-2xl overflow-hidden border transition-all ${
+                className={`relative aspect-[4/3] rounded-2xl overflow-hidden border transition-all group cursor-pointer ${
                   item.id === selectedId ? 'border-accent/70 ring-2 ring-accent/30' : 'border-border-subtle'
                 }`}
+                onClick={() => setSelectedId(item.id)}
               >
                 <img src={previewUrls[item.id]} alt={item.fileName} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/60 text-white">
                   {typeLabels[item.type]}
                 </div>
-              </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
+                  className="absolute top-2 right-2 p-2 rounded-xl bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent hover:text-void"
+                  title={t.ai_gallery_download}
+                >
+                  <ExportIcon className="w-4 h-4" />
+                </button>
+              </div>
             ))}
           </div>
         )}

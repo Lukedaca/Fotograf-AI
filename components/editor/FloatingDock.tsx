@@ -12,7 +12,7 @@ interface FloatingDockProps {
 
 const FloatingDock: React.FC<FloatingDockProps> = ({ items }) => {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-40 pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-2 border border-border-subtle bg-surface px-3 py-2">
         {items.map((item) => (
           <button

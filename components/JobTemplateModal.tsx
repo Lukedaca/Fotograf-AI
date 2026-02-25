@@ -13,10 +13,10 @@ const JobTemplateModal: React.FC<JobTemplateModalProps> = ({ onSelect, onClose }
   const { t } = useTranslation();
 
   const templates: { id: JobTemplate, title: string, desc: string, icon: string, color: string }[] = [
-    { id: 'portrait', title: t.template_portrait, desc: t.template_portrait_desc, icon: '👤' },
-    { id: 'event', title: t.template_event, desc: t.template_event_desc, icon: '💍' },
-    { id: 'product', title: t.template_product, desc: t.template_product_desc, icon: '📦' },
-    { id: 'social', title: t.template_social, desc: t.template_social_desc, icon: '📱' },
+    { id: 'portrait', title: t.template_portrait, desc: t.template_portrait_desc, icon: '👤', color: '#8B5CF6' },
+    { id: 'event', title: t.template_event, desc: t.template_event_desc, icon: '💍', color: '#F59E0B' },
+    { id: 'product', title: t.template_product, desc: t.template_product_desc, icon: '📦', color: '#10B981' },
+    { id: 'social', title: t.template_social, desc: t.template_social_desc, icon: '📱', color: '#3B82F6' },
   ];
 
   return (

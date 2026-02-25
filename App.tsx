@@ -190,7 +190,7 @@ function App() {
   const handleDeductCredits = useCallback(async (amount: number): Promise<boolean> => {
       if (isAdmin) return true;
       if (creditOperationInProgress.current) {
-        console.log('Credit operation already in progress');
+        console.warn('Credit operation already in progress');
         return false;
       }
 

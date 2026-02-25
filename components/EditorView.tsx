@@ -45,6 +45,7 @@ interface EditorViewProps {
   onToggleSidebar: () => void;
   credits: number;
   onDeductCredits: (amount: number) => Promise<boolean>;
+  onBuyCredits?: () => void;
   currentProjectId?: string | null;
 }
 
@@ -170,7 +171,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
-    setLoadingMessage("Odstraňuji pozadí...");
+    setLoadingMessage(trans.editor_removing_bg);
     try {
         const { file: newFile } = await geminiService.removeBackground(activeFile.file);
         const url = createTrackedUrl(newFile);
@@ -193,11 +194,11 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 5;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Nahrazuji pozadí...");
+    setLoadingMessage(trans.editor_replacing_bg);
     try {
         const { file: newFile } = await geminiService.replaceBackground(activeFile.file, bgPrompt.trim());
         const url = createTrackedUrl(newFile);
-        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'Výměna pozadí');
+        onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), trans.editor_bg_replace);
         setBgPrompt('');
         setShowBgModal(false);
         addNotification(trans.msg_success, 'info');
@@ -217,7 +218,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 3;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Vylepšuji obličeje...");
+    setLoadingMessage(trans.editor_enhancing_faces);
     try {
         const { file: newFile } = await geminiService.enhanceFaces(activeFile.file);
         const url = createTrackedUrl(newFile);
@@ -239,7 +240,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 2;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Hodnotím kvalitu...");
+    setLoadingMessage(trans.editor_scoring);
     try {
         const result = await geminiService.assessQuality(activeFile.file);
         setQualityAssessment(result);
@@ -262,7 +263,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
-    setLoadingMessage("AI analyzuje a vylepšuje váš snímek...");
+    setLoadingMessage(trans.editor_ai_enhancing);
     try {
         const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
         const url = createTrackedUrl(newFile);
@@ -303,7 +304,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     if (!await onDeductCredits(COST)) return;
 
     setIsLoading(true);
-    setLoadingMessage("AI hledá nejlepší ořez...");
+    setLoadingMessage(trans.editor_ai_crop_search);
     try {
         const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
         const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
@@ -319,7 +320,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
             cropRect: best.rect,
             aspectRatio: undefined
         }));
-        addNotification('Auto-ořez připraven (1–3)', 'info');
+        addNotification(trans.editor_autocrop_ready, 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
@@ -367,7 +368,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
       sharpness: manualEdits.sharpness,
       noiseReduction: manualEdits.noiseReduction,
     });
-    addNotification('Styl uložen: AI se naučí vaše preference.', 'info');
+    addNotification(trans.editor_style_saved, 'info');
   };
 
   const handleLearnStyle = () => {
@@ -383,7 +384,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
           sharpness: manualEdits.sharpness,
           noiseReduction: manualEdits.noiseReduction
       });
-      addNotification("Styl uložen! AI nyní zná váš 'Look'.", 'info');
+      addNotification(trans.editor_style_saved_look, 'info');
   };
 
   useEffect(() => {
@@ -398,7 +399,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 2;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Vybírám hlavní objekt...");
+    setLoadingMessage(trans.editor_selecting_subject);
     try {
         const { width, height } = await getImageDimensionsFromBlob(activeFile.file);
         const result = await geminiService.analyzeForAutoCrop(activeFile.file, { width, height });
@@ -410,7 +411,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
             cropRect: result.mainSubject,
             aspectRatio: undefined
         }));
-        addNotification('Objekt vybrán', 'info');
+        addNotification(trans.editor_subject_selected, 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
         if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
@@ -426,7 +427,6 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   useEffect(() => {
       if (!isVoiceActive) return;
 
-      // @ts-ignore
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
           addNotification('Voice recognition not supported in this browser', 'error');
@@ -529,25 +529,34 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   useEffect(() => {
     const suggestions: string[] = [];
     if (manualEdits.brightness > 25 && manualEdits.highlights < 10) {
-      suggestions.push('Zkuste snížit světla pro zachování detailů.');
+      suggestions.push(trans.suggestion_lower_highlights);
     }
     if (manualEdits.brightness < -20 && manualEdits.shadows < 10) {
-      suggestions.push('Zvedněte stíny pro více detailů.');
+      suggestions.push(trans.suggestion_raise_shadows);
     }
     if (manualEdits.saturation > 35 && manualEdits.vibrance < 10) {
-      suggestions.push('Zvyšte vibrance pro přirozenější sytost.');
+      suggestions.push(trans.suggestion_increase_vibrance);
     }
     if (manualEdits.sharpness > 60 && manualEdits.noiseReduction < 10) {
-      suggestions.push('Přidejte lehkou redukci šumu pro čistší obraz.');
+      suggestions.push(trans.suggestion_add_noise_reduction);
     }
     if (manualEdits.contrast < -20) {
-      suggestions.push('Zvyšte kontrast pro lepší dynamiku.');
+      suggestions.push(trans.suggestion_increase_contrast);
     }
     if (manualEdits.cropRect && !manualEdits.aspectRatio) {
-      suggestions.push('Rychlý tip: zvažte export do 4:3 nebo 3:2.');
+      suggestions.push(trans.suggestion_export_aspect);
     }
     setLiveSuggestions(suggestions.slice(0, 3));
-  }, [manualEdits]);
+  }, [manualEdits, trans]);
+
+  const switchToFile = useCallback((file: UploadedFile) => {
+    onSetActiveFileId(file.id);
+    setEditedPreviewUrl(null);
+    setManualEdits(INITIAL_EDITS);
+    setAutoCropSuggestions([]);
+    setAutoCropImageSize(null);
+    setQualityAssessment(file.assessment || null);
+  }, [onSetActiveFileId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -555,10 +564,20 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         setIsFocusMode(false);
         setRadialMenu(null);
       }
+      if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && files.length > 1) {
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+        const idx = files.findIndex(f => f.id === activeFileId);
+        if (event.key === 'ArrowLeft' && idx > 0) {
+          switchToFile(files[idx - 1]);
+        } else if (event.key === 'ArrowRight' && idx < files.length - 1) {
+          switchToFile(files[idx + 1]);
+        }
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [files, activeFileId, switchToFile]);
 
   useEffect(() => {
     if (autoCropSuggestions.length === 0) return;
@@ -584,7 +603,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     const COST = 10;
     if (!await onDeductCredits(COST)) return;
     setIsLoading(true);
-    setLoadingMessage("Gemini 3 Pro navrhuje virální miniaturu...");
+    setLoadingMessage(trans.editor_generating_thumbnail);
     try {
         const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { 
             resolution: thumbnailResolution, 
@@ -665,38 +684,38 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
         {/* Quick Start Ribbon */}
         {!isFocusMode && !isYouTubeMode && activeFile && (
           <div className="bg-void border-b border-border-subtle py-2 px-8 flex items-center gap-4 overflow-x-auto custom-scrollbar">
-            <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-2">Rychlé akce:</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-2">{trans.editor_quick_actions}</span>
             <button onClick={handleAutopilot} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <AutopilotIcon className="w-3.5 h-3.5" />
-              Základní úprava
+              {trans.editor_basic_edit}
             </button>
             <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <EraserIcon className="w-3.5 h-3.5" />
-              Retuš
+              {trans.editor_retouch}
             </button>
             <button onClick={() => onNavigate({ view: 'editor', action: 'auto-crop' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <AutoCropIcon className="w-3.5 h-3.5" />
-              Auto‑ořez
+              {trans.editor_auto_crop}
             </button>
             <button onClick={handleBackgroundRemoval} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
-              Odstranit pozadí
+              {trans.editor_remove_bg}
             </button>
             <button onClick={() => setShowBgModal(true)} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <BackgroundReplacementIcon className="w-3.5 h-3.5" />
-              Vyměnit pozadí
+              {trans.editor_replace_bg}
             </button>
             <button onClick={handleSmartSelect} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Vybrat subjekt
+              {trans.editor_select_subject}
             </button>
             <button onClick={handleFaceEnhance} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Vylepšit obličej
+              {trans.editor_enhance_face}
             </button>
             <button onClick={handleScorePhoto} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <SparklesIcon className="w-3.5 h-3.5" />
-              Skóre
+              {trans.editor_score}
             </button>
             <button onClick={() => onNavigate({ view: 'editor', action: 'export' })} className="ml-auto flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
               <ExportIcon className="w-3.5 h-3.5" />
@@ -733,7 +752,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                            ) : (
                                <>
                                 <div className="relative inline-block">
-                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt="Náhled" className="block max-h-full max-w-full object-contain select-none" />
+                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt={trans.editor_preview} className="block max-h-full max-w-full object-contain select-none" />
                                   {autoCropSuggestions.length > 0 && autoCropImageSize && (
                                     <div className="absolute inset-0 pointer-events-none">
                                       {autoCropSuggestions.slice(0, 3).map((item, idx) => {
@@ -779,7 +798,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                 {!isYouTubeMode && autoCropSuggestions.length > 0 && (
                     <div className="absolute bottom-4 left-4 z-40 bg-surface/90 backdrop-blur border border-border-subtle p-4 rounded-2xl shadow-xl">
                         <div className="flex items-center justify-between gap-4 mb-3">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-accent">AI ořez</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-accent">{trans.editor_ai_crop}</div>
                             <button
                                 onClick={() => {
                                     setAutoCropSuggestions([]);
@@ -788,7 +807,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                 }}
                                 className="text-[10px] text-text-secondary hover:text-text-primary"
                             >
-                                Zrušit
+                                {trans.editor_cancel}
                             </button>
                         </div>
                         <div className="flex gap-2">
@@ -814,7 +833,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                 </button>
                             ))}
                         </div>
-                        <div className="mt-2 text-[10px] text-text-secondary">Zkratky: 1, 2, 3</div>
+                        <div className="mt-2 text-[10px] text-text-secondary">{trans.editor_shortcuts}</div>
                     </div>
                 )}
                 
@@ -823,6 +842,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                         <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
                 )}
+
             </div>
 
             {/* Controls Sidebar */}
@@ -839,7 +859,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                 {/* Job Log (Recent History) */}
                 <div className="px-8 pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Log úprav</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">{trans.editor_edit_log}</h4>
                     <div className="flex gap-2">
                       <button onClick={onUndo} disabled={history.past.length === 0} className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3" /></button>
                       <button onClick={onRedo} disabled={history.future.length === 0} className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30"><UndoIcon className="w-3 h-3 rotate-180" /></button>
@@ -868,9 +888,9 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                 {!isYouTubeMode && activeFile && (
                     <div className="px-8 mt-4">
                         <div className="p-4 border border-border-subtle bg-elevated rounded-2xl shadow-sm">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">AI doporučení</div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-2">{trans.editor_ai_recommendations}</div>
                             {liveSuggestions.length === 0 ? (
-                                <div className="text-xs text-text-secondary">Vše vypadá dobře.</div>
+                                <div className="text-xs text-text-secondary">{trans.editor_looks_good}</div>
                             ) : (
                                 <div className="space-y-2">
                                     {liveSuggestions.map((item, idx) => (
@@ -888,8 +908,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                     <div className="px-8 mt-4">
                         <div className="p-4 border border-border-subtle bg-surface rounded-2xl shadow-sm">
                             <div className="flex items-center justify-between mb-2">
-                                <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">AI skóre</div>
-                                <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">Spustit</button>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-text-secondary">{trans.editor_ai_score}</div>
+                                <button onClick={handleScorePhoto} className="text-[10px] text-text-secondary hover:text-text-primary">{trans.editor_run}</button>
                             </div>
                             {qualityAssessment ? (
                                 <div className="space-y-2 text-xs text-text-secondary">
@@ -910,7 +930,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-xs text-text-secondary">Zatím bez hodnocení.</div>
+                                <div className="text-xs text-text-secondary">{trans.editor_no_score}</div>
                             )}
                         </div>
                     </div>
@@ -977,6 +997,18 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                 <SparklesIcon className="w-5 h-5" />
                                 {trans.tool_youtube_btn}
                             </button>
+                            {activeFile && (
+                                <div className="pt-4 border-t border-border-subtle space-y-3">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Export</h4>
+                                    <button
+                                        onClick={handleManualExport}
+                                        className="w-full py-3 bg-accent text-void text-sm font-bold border border-accent rounded-xl flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <ExportIcon className="w-4 h-4" />
+                                        {trans.export_btn}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1000,16 +1032,16 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                          
                          {/* LEARN STYLE BUTTON */}
                          <div className="pt-4 border-t border-border-subtle">
-                             <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-3">AI Personalizace</h4>
-                             <button 
+                             <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-3">{trans.editor_ai_personalization}</h4>
+                             <button
                                 onClick={handleLearnStyle}
                                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-violet-900 to-fuchsia-900 border border-violet-700 hover:border-violet-500 text-white text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]"
                              >
                                  <StyleTransferIcon className="w-4 h-4" />
-                                 Učit se můj styl
+                                 {trans.editor_learn_style}
                              </button>
                              <p className="text-[10px] text-text-secondary mt-2 text-center">
-                                 Uloží aktuální nastavení jako váš osobní AI podpis.
+                                 {trans.editor_learn_style_desc}
                              </p>
                          </div>
                         </>
@@ -1019,6 +1051,60 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
             )}
             </AnimatePresence>
         </div>
+
+        {/* Filmstrip - photo switcher (top-level, always visible) */}
+        {!isFocusMode && !isYouTubeMode && files.length > 1 && (
+          <div className="flex-shrink-0 bg-void border-t border-b border-border-subtle">
+            <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto custom-scrollbar">
+              <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mr-1 flex-shrink-0">
+                {files.findIndex(f => f.id === activeFileId) + 1}/{files.length}
+              </span>
+              {files.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    if (f.id === activeFileId) return;
+                    switchToFile(f);
+                  }}
+                  className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                    f.id === activeFileId
+                      ? 'border-accent shadow-lg shadow-accent/20 scale-105'
+                      : 'border-border-subtle opacity-60 hover:opacity-100 hover:border-text-secondary'
+                  }`}
+                >
+                  <img
+                    src={f.previewUrl}
+                    alt={f.file.name}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+              <div className="flex-shrink-0 flex items-center gap-1 ml-2">
+                <button
+                  onClick={() => {
+                    const idx = files.findIndex(f => f.id === activeFileId);
+                    if (idx > 0) switchToFile(files[idx - 1]);
+                  }}
+                  disabled={files.findIndex(f => f.id === activeFileId) <= 0}
+                  className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <button
+                  onClick={() => {
+                    const idx = files.findIndex(f => f.id === activeFileId);
+                    if (idx < files.length - 1) switchToFile(files[idx + 1]);
+                  }}
+                  disabled={files.findIndex(f => f.id === activeFileId) >= files.length - 1}
+                  className="p-1.5 rounded-lg bg-elevated border border-border-subtle text-text-secondary hover:text-text-primary disabled:opacity-30 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence>
           {!isFocusMode && !isYouTubeMode && activeFile && (
@@ -1055,13 +1141,13 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
               onClose={() => setRadialMenu(null)}
               items={[
                 { id: 'autopilot', label: 'Autopilot', onClick: handleAutopilot },
-                { id: 'auto-crop', label: 'Auto‑ořez', onClick: handleAutoCrop },
-                { id: 'select-subject', label: 'Vybrat subjekt', onClick: handleSmartSelect },
-                { id: 'remove-bg', label: 'Odstranit pozadí', onClick: handleBackgroundRemoval },
-                { id: 'replace-bg', label: 'Vyměnit pozadí', onClick: () => setShowBgModal(true) },
-                { id: 'face', label: 'Vylepšit obličej', onClick: handleFaceEnhance },
-                { id: 'score', label: 'AI skóre', onClick: handleScorePhoto },
-                { id: 'compare', label: isComparing ? 'Zastavit porovnání' : 'Porovnat', onClick: () => setIsComparing((p) => !p) },
+                { id: 'auto-crop', label: trans.editor_auto_crop, onClick: handleAutoCrop },
+                { id: 'select-subject', label: trans.editor_select_subject, onClick: handleSmartSelect },
+                { id: 'remove-bg', label: trans.editor_remove_bg, onClick: handleBackgroundRemoval },
+                { id: 'replace-bg', label: trans.editor_replace_bg, onClick: () => setShowBgModal(true) },
+                { id: 'face', label: trans.editor_enhance_face, onClick: handleFaceEnhance },
+                { id: 'score', label: trans.editor_ai_score, onClick: handleScorePhoto },
+                { id: 'compare', label: isComparing ? trans.editor_stop_compare : trans.editor_compare, onClick: () => setIsComparing((p) => !p) },
                 { id: 'export', label: 'Export', onClick: handleManualExport },
               ]}
             />
@@ -1072,23 +1158,23 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className="w-full max-w-lg border border-border-subtle bg-surface rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm font-black uppercase tracking-widest text-text-secondary">Vyměnit pozadí</div>
-                <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">Zavřít</button>
+                <div className="text-sm font-black uppercase tracking-widest text-text-secondary">{trans.editor_replace_bg}</div>
+                <button onClick={() => setShowBgModal(false)} className="text-xs text-text-secondary hover:text-text-primary">{trans.editor_close}</button>
               </div>
               <textarea
                 rows={4}
                 value={bgPrompt}
                 onChange={(e) => setBgPrompt(e.target.value)}
-                placeholder="např. neonová ulice v Tokiu, zlatá hodinka, studiové pozadí"
+                placeholder={trans.editor_bg_placeholder}
                 className="w-full bg-elevated border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary outline-none focus:border-accent"
               />
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-[11px] text-text-secondary">Cena: 5 kreditů</span>
+                <span className="text-[11px] text-text-secondary">{trans.editor_bg_cost}</span>
                 <button
                   onClick={handleBackgroundReplace}
                   className="px-4 py-2 text-[11px] font-bold bg-accent text-void rounded-lg hover:bg-accent/80 transition-all"
                 >
-                  Apply
+                  {trans.editor_apply}
                 </button>
               </div>
             </div>

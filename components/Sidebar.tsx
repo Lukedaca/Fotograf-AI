@@ -86,10 +86,10 @@ const Sidebar = ({ isOpen, isCollapsed, onClose, onNavigate, onToggleCollapse, c
     { icon: <ExportIcon className="w-5 h-5 flex-shrink-0"/>, label: t.pipeline_step_export, view: "editor" as View, action: "export" },
   ];
 
-  const crmTools = [
-    { icon: <DashboardIcon />, label: t.nav_studio, view: "dashboard" as View },
-    { icon: <FolderIcon />, label: t.nav_projects, view: "projects" as View },
-    { icon: <UsersIcon />, label: t.nav_clients, view: "clients" as View },
+  const crmTools: { icon: React.ReactNode; label: string; view: View; action?: string }[] = [
+    { icon: <DashboardIcon />, label: t.nav_studio, view: "dashboard" },
+    { icon: <FolderIcon />, label: t.nav_projects, view: "projects" },
+    { icon: <UsersIcon />, label: t.nav_clients, view: "clients" },
   ];
 
   const creativeTools = [

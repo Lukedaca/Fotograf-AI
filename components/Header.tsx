@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ title, onToggleSidebar, credits, onBuyC
       <button
         onClick={onToggleSidebar}
         className="lg:hidden p-2 -ml-2 mr-4 text-text-secondary"
-        aria-label="Otevřít menu"
+        aria-label={t.header_open_menu}
       >
         <MenuIcon className="w-6 h-6" />
       </button>
