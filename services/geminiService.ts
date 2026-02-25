@@ -150,21 +150,31 @@ const getGenAI = () => {
 export const generateYouTubeThumbnail = async (
     topic: string, 
     textOverlay: string, 
-    options: { resolution: '1K' | '2K' | '4K', format: 'jpeg' | 'png' | 'webp' }
+    options: { resolution: '1K' | '2K' | '4K', format: 'jpeg' | 'png' | 'webp', referenceFile?: File }
 ): Promise<{ file: File }> => {
     return withRetry(async () => {
         const ai = getGenAI();
         
-        const prompt = `Vytvoř ultra-kvalitní virální YouTube miniaturu od nuly.
+        let prompt = `Vytvoř ultra-kvalitní virální YouTube miniaturu.
         Téma: ${topic}.
         POVINNÝ text: "${textOverlay}".
         Kompozice: vysoký kontrast, syté barvy, filmové konturové světlo,
         optimalizováno pro maximální CTR. Typografie musí být velká, výrazná a 3D.
         Drž profesionální creator estetiku.`;
 
+        const parts: any[] = [];
+        
+        if (options.referenceFile) {
+            const base64Ref = await fileToBase64(options.referenceFile);
+            parts.push({ inlineData: { data: base64Ref, mimeType: options.referenceFile.type } });
+            prompt += `\n\nPOUŽIJ PŘILOŽENÝ OBRÁZEK JAKO REFERENCI. Zachovej z něj hlavní subjekt, styl nebo kompozici, ale transformuj jej do virální YouTube estetiky.`;
+        }
+        
+        parts.push({ text: prompt });
+
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-image-preview',
-            contents: { parts: [{ text: prompt }] },
+            contents: { parts },
             config: { 
                 imageConfig: { 
                     aspectRatio: "16:9", 

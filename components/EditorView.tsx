@@ -106,6 +106,8 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [thumbnailText, setThumbnailText] = useState('');
   const [thumbnailResolution, setThumbnailResolution] = useState<'1K' | '2K' | '4K'>('1K');
   const [thumbnailFormat, setThumbnailFormat] = useState<'jpeg' | 'png' | 'webp'>('jpeg');
+  const [thumbnailReferenceFile, setThumbnailReferenceFile] = useState<File | null>(null);
+  const [thumbnailReferencePreview, setThumbnailReferencePreview] = useState<string | null>(null);
 
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
@@ -584,7 +586,11 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     setIsLoading(true);
     setLoadingMessage("Gemini 3 Pro navrhuje virální miniaturu...");
     try {
-        const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { resolution: thumbnailResolution, format: thumbnailFormat });
+        const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { 
+            resolution: thumbnailResolution, 
+            format: thumbnailFormat,
+            referenceFile: thumbnailReferenceFile || undefined
+        });
         const previewUrl = createTrackedUrl(file);
         const newUploadedFile: UploadedFile = { id: `yt-${Date.now()}`, file, previewUrl, originalPreviewUrl: previewUrl };
         onSetFiles(prev => [...prev, newUploadedFile], 'YouTube Thumbnail Creation');
@@ -596,7 +602,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                 createdAt: new Date().toISOString(),
                 type: 'youtube-thumbnail' as AIGalleryType,
                 prompt: `Topic: ${thumbnailTopic}
-Text: ${thumbnailText}`,
+Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : ''}`,
                 projectId: currentProjectId || null,
                 fileName: file.name,
                 mimeType: file.type,
@@ -609,8 +615,31 @@ Text: ${thumbnailText}`,
             console.error('Failed to save AI gallery item', e);
         }
         addNotification(trans.msg_success, 'info');
-    } catch (e) { addNotification(trans.msg_error, 'error'); }
+    } catch (e) { 
+        console.error('Thumbnail generation failed:', e);
+        addNotification(trans.msg_error, 'error'); 
+    }
     finally { setIsLoading(false); }
+  };
+
+  const handleSetReferenceFile = (file: File) => {
+    setThumbnailReferenceFile(file);
+    if (thumbnailReferencePreview) revokeTrackedUrl(thumbnailReferencePreview);
+    setThumbnailReferencePreview(createTrackedUrl(file));
+  };
+
+  const handleClearReference = () => {
+    setThumbnailReferenceFile(null);
+    if (thumbnailReferencePreview) {
+        revokeTrackedUrl(thumbnailReferencePreview);
+        setThumbnailReferencePreview(null);
+    }
+  };
+
+  const handleUseActiveFileAsReference = async () => {
+    if (!activeFile) return;
+    handleSetReferenceFile(activeFile.file);
+    addNotification('Aktuální fotka nastavena jako reference.', 'info');
   };
 
   if (!activeFile && !isYouTubeMode) {
@@ -898,6 +927,48 @@ Text: ${thumbnailText}`,
                                 <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
                                 <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">Vizuální reference (Screenshot)</label>
+                                
+                                {thumbnailReferencePreview ? (
+                                    <div className="relative group rounded-xl overflow-hidden border border-accent/30 bg-accent/5 aspect-video">
+                                        <img src={thumbnailReferencePreview} alt="Reference" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                            <button onClick={handleClearReference} className="p-2 bg-red-500/80 rounded-full text-white hover:bg-red-500 transition-colors">
+                                                <EraserIcon className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        <div 
+                                            onClick={() => document.getElementById('ref-upload')?.click()}
+                                            className="border-2 border-dashed border-border-subtle hover:border-accent/50 bg-elevated/50 hover:bg-accent/5 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
+                                        >
+                                            <UploadIcon className="w-6 h-6 text-text-secondary" />
+                                            <span className="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Nahrát screenshot</span>
+                                            <input 
+                                                id="ref-upload" 
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={(e) => e.target.files?.[0] && handleSetReferenceFile(e.target.files[0])} 
+                                            />
+                                        </div>
+                                        
+                                        {activeFile && (
+                                            <button 
+                                                onClick={handleUseActiveFileAsReference}
+                                                className="w-full py-2 px-3 border border-border-subtle bg-surface hover:bg-elevated rounded-lg text-[10px] font-black uppercase tracking-widest text-text-secondary transition-all"
+                                            >
+                                                Použít aktuální fotku
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                              <div className="flex items-center justify-between text-xs text-text-secondary">
                                 <span>{trans.credits_cost}:</span>
                                 <span className="font-bold text-warning">10 {trans.credits_remaining}</span>
