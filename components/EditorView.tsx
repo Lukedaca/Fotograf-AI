@@ -132,6 +132,26 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   }, [editedPreviewUrl]);
 
   useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+        if (!isYouTubeMode) return;
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                if (blob) {
+                    handleSetReferenceFile(blob);
+                    addNotification('Screenshot vložen ze schránky', 'info');
+                    break;
+                }
+            }
+        }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isYouTubeMode, trans]);
+
+  useEffect(() => {
     if (!activeFile) return;
     setQualityAssessment(activeFile.assessment || null);
 
@@ -948,15 +968,19 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                 <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                             </div>
 
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">Vizuální reference (Screenshot)</label>
+                            <div className="space-y-3 p-1">
+                                <label className="text-[10px] font-black text-accent uppercase tracking-widest ml-1 flex items-center gap-2">
+                                    <SparklesIcon className="w-3 h-3" />
+                                    Vizuální reference (Screenshot)
+                                </label>
                                 
                                 {thumbnailReferencePreview ? (
-                                    <div className="relative group rounded-xl overflow-hidden border border-accent/30 bg-accent/5 aspect-video">
-                                        <img src={thumbnailReferencePreview} alt="Reference" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                            <button onClick={handleClearReference} className="p-2 bg-red-500/80 rounded-full text-white hover:bg-red-500 transition-colors">
-                                                <EraserIcon className="w-5 h-5" />
+                                    <div className="relative group rounded-xl overflow-hidden border-2 border-accent shadow-[0_0_15px_rgba(139,92,246,0.3)] bg-accent/5 aspect-video">
+                                        <img src={thumbnailReferencePreview} alt="Reference" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm">
+                                            <button onClick={handleClearReference} className="px-4 py-2 bg-red-500 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
+                                                <EraserIcon className="w-4 h-4" />
+                                                Odstranit
                                             </button>
                                         </div>
                                     </div>
@@ -964,10 +988,15 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                     <div className="flex flex-col gap-2">
                                         <div 
                                             onClick={() => document.getElementById('ref-upload')?.click()}
-                                            className="border-2 border-dashed border-border-subtle hover:border-accent/50 bg-elevated/50 hover:bg-accent/5 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all"
+                                            className="border-2 border-dashed border-border-subtle hover:border-accent hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] bg-elevated/50 hover:bg-accent/5 rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all group"
                                         >
-                                            <UploadIcon className="w-6 h-6 text-text-secondary" />
-                                            <span className="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Nahrát screenshot</span>
+                                            <div className="p-3 rounded-full bg-surface border border-border-subtle group-hover:border-accent group-hover:bg-accent/10 transition-all">
+                                                <UploadIcon className="w-6 h-6 text-text-secondary group-hover:text-accent" />
+                                            </div>
+                                            <div className="text-center">
+                                                <span className="block text-[11px] text-text-primary font-black uppercase tracking-wider mb-1">Vložit screenshot</span>
+                                                <span className="block text-[9px] text-text-secondary uppercase tracking-tighter">Nahrát, nebo stisknout Ctrl+V</span>
+                                            </div>
                                             <input 
                                                 id="ref-upload" 
                                                 type="file" 
@@ -980,9 +1009,10 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                         {activeFile && (
                                             <button 
                                                 onClick={handleUseActiveFileAsReference}
-                                                className="w-full py-2 px-3 border border-border-subtle bg-surface hover:bg-elevated rounded-lg text-[10px] font-black uppercase tracking-widest text-text-secondary transition-all"
+                                                className="w-full py-2.5 px-3 border border-border-subtle bg-surface hover:bg-elevated hover:border-accent/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary transition-all flex items-center justify-center gap-2"
                                             >
-                                                Použít aktuální fotku
+                                                <HistoryIcon className="w-3.5 h-3.5" />
+                                                Použít aktuální z editoru
                                             </button>
                                         )}
                                     </div>
