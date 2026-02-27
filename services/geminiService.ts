@@ -173,7 +173,7 @@ export const generateYouTubeThumbnail = async (
         parts.push({ text: prompt });
 
         const response = await ai.models.generateContent({
-            model: 'imagen-3.1-flash',
+            model: 'gemini-3.1-flash-image-preview',
             contents: { parts },
             config: { 
                 imageConfig: { 
@@ -205,7 +205,7 @@ export const analyzeImage = async (file: File, language: Language = 'cs'): Promi
     const ai = getGenAI();
     const base64Image = await fileToBase64(file);
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash',
+      model: 'gemini-3.1-flash-preview',
       contents: {
         parts: [
           { inlineData: { mimeType: file.type, data: base64Image } },
@@ -223,7 +223,7 @@ export const autopilotImage = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'imagen-3.1-flash',
+            model: 'gemini-3.1-flash-image-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -240,7 +240,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
   return withRetry(async () => {
     const ai = getGenAI();
     const response = await ai.models.generateContent({ 
-        model: 'gemini-3.1-flash-image', 
+        model: 'gemini-3.1-flash-image-preview', 
         contents: { parts: [{ text: prompt }] } 
     });
     const imagePart = getInlineImageData(response);
@@ -253,7 +253,7 @@ export const removeBackground = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'imagen-3.1-flash',
+            model: 'gemini-3.1-flash-image-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -271,7 +271,7 @@ export const replaceBackground = async (file: File, description: string): Promis
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'imagen-3.1-flash',
+            model: 'gemini-3.1-flash-image-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -289,7 +289,7 @@ export const enhanceFaces = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'imagen-3.1-flash',
+            model: 'gemini-3.1-flash-image-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -333,7 +333,7 @@ JSON tvar:
 }`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash',
+            model: 'gemini-3.1-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -353,7 +353,7 @@ export const assessQuality = async (file: File): Promise<QualityAssessment> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash',
+            model: 'gemini-3.1-flash-preview',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
