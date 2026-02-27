@@ -173,7 +173,7 @@ export const generateYouTubeThumbnail = async (
         parts.push({ text: prompt });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
+            model: 'imagen-3.1-flash',
             contents: { parts },
             config: { 
                 imageConfig: { 
@@ -223,7 +223,7 @@ export const autopilotImage = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
+            model: 'imagen-3.1-flash',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -253,7 +253,7 @@ export const removeBackground = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
+            model: 'imagen-3.1-flash',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -271,7 +271,7 @@ export const replaceBackground = async (file: File, description: string): Promis
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
+            model: 'imagen-3.1-flash',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
@@ -289,7 +289,7 @@ export const enhanceFaces = async (file: File): Promise<{ file: File }> => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image',
+            model: 'imagen-3.1-flash',
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
