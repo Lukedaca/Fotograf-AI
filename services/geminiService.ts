@@ -178,7 +178,7 @@ export const generateYouTubeThumbnail = async (
             config: { 
                 imageConfig: { 
                     aspectRatio: "16:9", 
-                    imageSize: "4K" 
+                    imageSize: "LARGE" 
                 } 
             }
         });
