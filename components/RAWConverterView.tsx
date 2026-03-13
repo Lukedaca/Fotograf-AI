@@ -49,7 +49,6 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
     // Conversion settings
     const [quality, setQuality] = useState(92);
     const [maxResolution, setMaxResolution] = useState(0);
-    const [autoSave, setAutoSave] = useState(true);
 
     const handleFileSelect = (files: FileList | null) => {
         if (files) {
@@ -143,11 +142,6 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
 
         if (newConvertedFiles.length > 0) {
             addNotification(`${t.raw_done}. ${newConvertedFiles.length} ${t.notify_raw_success}`, 'info');
-
-            // Auto-save: immediately open folder picker
-            if (autoSave) {
-                await saveAllToFolder(newConvertedFiles);
-            }
         }
     };
 
@@ -269,25 +263,8 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                         </select>
                                     </div>
 
-                                    {/* Auto-save toggle */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-text-secondary mb-2">
-                                            {t.raw_auto_save || 'Po konverzi'}
-                                        </label>
-                                        <button
-                                            onClick={() => setAutoSave(!autoSave)}
-                                            className={`w-full px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
-                                                autoSave
-                                                    ? 'border-accent bg-accent/10 text-accent'
-                                                    : 'border-border-subtle bg-void text-text-secondary'
-                                            }`}
-                                        >
-                                            <ExportIcon className="inline w-4 h-4 mr-2 -mt-0.5" />
-                                            {autoSave
-                                                ? (t.raw_auto_save_on || 'Ulozit hned do slozky')
-                                                : (t.raw_auto_save_off || 'Rucne ulozit pozdeji')}
-                                        </button>
-                                    </div>
+                                    {/* Spacer for grid alignment */}
+                                    <div></div>
                                 </div>
                             </div>
                         )}
@@ -334,26 +311,28 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                 {isConverting ? `${t.raw_converting} (${progress.current}/${progress.total})...` : `${t.raw_convert} ${rawFiles.length === 0 ? '' : (rawFiles.length === 1 ? '1' : rawFiles.length)}`}
                             </button>
                         ) : (
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                    <button
-                                    onClick={handleAddToProject}
-                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-accent text-base font-medium text-void bg-accent transition-none"
-                                >
-                                    {t.raw_add}
-                                </button>
+                            <div className="flex flex-col gap-4">
                                 <button
                                     onClick={handleSaveToFolder}
-                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-accent/10 transition-colors"
+                                    className="w-full inline-flex items-center justify-center px-6 py-4 border border-accent text-lg font-semibold text-void bg-accent transition-none"
                                 >
-                                    <ExportIcon className="mr-2 h-4 w-4" />
+                                    <ExportIcon className="mr-3 h-6 w-6" />
                                     {t.raw_save_folder}
                                 </button>
-                                <button
-                                    onClick={() => { setRawFiles([]); setConvertedFiles([]); }}
-                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium rounded-md shadow-sm text-text-primary bg-elevated hover:bg-elevated transition-colors"
-                                >
-                                    {t.raw_convert_more}
-                                </button>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <button
+                                        onClick={handleAddToProject}
+                                        className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-accent/10 transition-colors"
+                                    >
+                                        {t.raw_add}
+                                    </button>
+                                    <button
+                                        onClick={() => { setRawFiles([]); setConvertedFiles([]); }}
+                                        className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-elevated transition-colors"
+                                    >
+                                        {t.raw_convert_more}
+                                    </button>
+                                </div>
                             </div>
                         )}
                         {isConverting && (
