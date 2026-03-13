@@ -262,6 +262,10 @@ const translations = {
     gen_btn: "Generovat obrázek",
     gen_generating: "Generuji...",
     gen_add: "Přidat do projektu",
+    gen_canvas: "AI plátno",
+    gen_preview_label: "Náhled",
+
+    dash_renewal_date: "1. března 2026",
 
     raw_title: "RAW Konvertor",
     raw_subtitle: "Hromadná konverze profesionálních RAW souborů.",
@@ -274,6 +278,10 @@ const translations = {
     raw_or_click: "or click",
     raw_select_other: "Vybrat jiné",
     raw_no_files: "Nebyly vybrány žádné soubory.",
+    raw_save_folder: "Uložit do složky",
+    raw_save_folder_success: "souborů uloženo do složky.",
+    raw_save_folder_error: "Nepodařilo se otevřít složku.",
+    raw_save_file_error: "Chyba při ukládání",
 
     msg_api_missing: "Nastala chyba v komunikaci s AI.",
     msg_success: "Akce dokončena.",
@@ -713,6 +721,10 @@ const translations = {
     gen_btn: "Generate",
     gen_generating: "Generating...",
     gen_add: "Add to Project",
+    gen_canvas: "AI Canvas",
+    gen_preview_label: "Preview",
+
+    dash_renewal_date: "March 1, 2026",
 
     raw_title: "RAW Converter",
     raw_subtitle: "Bulk RAW to JPEG conversion.",
@@ -725,6 +737,10 @@ const translations = {
     raw_or_click: "or click",
     raw_select_other: "Select Other",
     raw_no_files: "No files selected.",
+    raw_save_folder: "Save to Folder",
+    raw_save_folder_success: "files saved to folder.",
+    raw_save_folder_error: "Could not open folder.",
+    raw_save_file_error: "Error saving",
 
     msg_api_missing: "Communication error with AI service.",
     msg_success: "Success.",
