@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { UploadIcon, ArrowPathIcon, ExportIcon, XCircleIcon } from './icons';
 import Header from './Header';
@@ -92,7 +92,35 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         const files = convertedFiles.map(cf => new File([cf.blob], cf.originalName, { type: 'image/jpeg' }));
         onFilesConverted(files);
     };
-    
+
+    const handleSaveToFolder = async () => {
+        if (convertedFiles.length === 0) return;
+        try {
+            // @ts-ignore - File System Access API (Chrome/Edge)
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            let saved = 0;
+            for (const file of convertedFiles) {
+                try {
+                    const fileHandle = await dirHandle.getFileHandle(file.originalName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(file.blob);
+                    await writable.close();
+                    saved++;
+                } catch (e) {
+                    console.error(`Save failed: ${file.originalName}`, e);
+                    addNotification(`${t.raw_save_file_error} ${file.originalName}`, 'error');
+                }
+            }
+            if (saved > 0) {
+                addNotification(`${saved} ${t.raw_save_folder_success}`, 'info');
+            }
+        } catch (e: any) {
+            if (e.name !== 'AbortError') {
+                addNotification(t.raw_save_folder_error, 'error');
+            }
+        }
+    };
+
     const downloadFile = (url: string, name: string) => {
         const link = document.createElement('a');
         link.href = url;
@@ -197,6 +225,13 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                     {t.raw_add}
                                 </button>
                                 <button
+                                    onClick={handleSaveToFolder}
+                                    className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-accent/10 transition-colors"
+                                >
+                                    <ExportIcon className="mr-2 h-4 w-4" />
+                                    {t.raw_save_folder}
+                                </button>
+                                <button
                                     onClick={() => { setRawFiles([]); setConvertedFiles([]); }}
                                     className="w-full sm:w-auto flex-1 inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium rounded-md shadow-sm text-text-primary bg-elevated hover:bg-elevated transition-colors"
                                 >
@@ -218,6 +253,3 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
 }
 
 export default RAWConverterView;
-
-
-
