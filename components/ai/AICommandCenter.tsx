@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import Header from '../Header';
 import CompareSlider from '../CompareSlider';
 import { SparklesIcon } from '../icons';
@@ -21,6 +21,14 @@ interface AICommandCenterProps {
   addNotification: (message: string, type?: 'info' | 'error') => void;
 }
 
+type BatchProgress = {
+  current: number;
+  total: number;
+  activeFileName: string;
+};
+
+const AUTOPILOT_COST = 3;
+
 const AICommandCenter: React.FC<AICommandCenterProps> = ({
   title,
   onToggleSidebar,
@@ -36,10 +44,20 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EnhancementMode>('auto');
-  const [enhancedPreviewUrl, setEnhancedPreviewUrl] = useState<string | null>(null);
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
   const [stylePresets, setStylePresets] = useState<{ id: string; name: string }[]>([]);
+  const hasInitializedSelection = useRef(false);
   const activeFile = useMemo(() => files.find((f) => f.id === activeFileId) || null, [files, activeFileId]);
+  const selectedFiles = useMemo(() => {
+    const selectedIds = new Set(selectedFileIds);
+    return files.filter((file) => selectedIds.has(file.id));
+  }, [files, selectedFileIds]);
+  const enhancedPreviewUrl = activeFile && activeFile.previewUrl !== activeFile.originalPreviewUrl
+    ? activeFile.previewUrl
+    : null;
+  const totalCreditCost = selectedFiles.length * AUTOPILOT_COST;
 
   useEffect(() => {
     if (!activeFileId && files.length > 0) {
@@ -48,12 +66,28 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
   }, [activeFileId, files, onSetActiveFileId]);
 
   useEffect(() => {
-    return () => {
-      if (enhancedPreviewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(enhancedPreviewUrl);
+    if (files.length === 0) {
+      hasInitializedSelection.current = false;
+      setSelectedFileIds([]);
+      return;
+    }
+
+    const availableIds = new Set(files.map((file) => file.id));
+    setSelectedFileIds((current) => {
+      const next = current.filter((id) => availableIds.has(id));
+      if (next.length !== current.length) {
+        return next;
       }
-    };
-  }, [enhancedPreviewUrl]);
+      if (!hasInitializedSelection.current && next.length === 0) {
+        hasInitializedSelection.current = true;
+        if (activeFileId && availableIds.has(activeFileId)) {
+          return [activeFileId];
+        }
+        return [files[0].id];
+      }
+      return current;
+    });
+  }, [activeFileId, files]);
 
   const modes: { id: EnhancementMode; label: string }[] = [
     { id: 'auto', label: 'Auto' },
@@ -67,33 +101,120 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
     { id: 'your-style', label: t.aicc_mode_yourstyle },
   ];
 
+  const toggleFileSelection = useCallback((fileId: string) => {
+    hasInitializedSelection.current = true;
+    setSelectedFileIds((current) => (
+      current.includes(fileId)
+        ? current.filter((id) => id !== fileId)
+        : [...current, fileId]
+    ));
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    hasInitializedSelection.current = true;
+    setSelectedFileIds(files.map((file) => file.id));
+  }, [files]);
+
+  const handleClearSelection = useCallback(() => {
+    hasInitializedSelection.current = true;
+    setSelectedFileIds([]);
+  }, []);
+
+  const handleSelectActiveOnly = useCallback(() => {
+    if (!activeFileId) return;
+    hasInitializedSelection.current = true;
+    setSelectedFileIds([activeFileId]);
+  }, [activeFileId]);
+
   const handleRun = useCallback(async () => {
-    if (!activeFile) return;
-    const COST = 3;
-    if (!await onDeductCredits(COST)) return;
+    if (selectedFiles.length === 0) return;
+
+    const total = selectedFiles.length;
+    let processed = 0;
+    let succeeded = 0;
+    let failed = 0;
+    let interrupted = false;
+
     setIsRunning(true);
+    setBatchProgress({ current: 0, total, activeFileName: selectedFiles[0].file.name });
+
     try {
-      const result = await runAutopilot(activeFile.file, mode);
-      setStylePresets(result.stylePresets.map((preset) => ({ id: preset.id, name: preset.name })));
-      if (result.enhancedFile) {
-        const url = URL.createObjectURL(result.enhancedFile);
-        setEnhancedPreviewUrl((prev) => {
-          if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
-          return url;
-        });
-        onSetFiles(current => current.map(f => f.id === activeFile.id ? { ...f, file: result.enhancedFile!, previewUrl: url } : f), t.aicc_title);
+      for (const file of selectedFiles) {
+        setBatchProgress({ current: processed, total, activeFileName: file.file.name });
+
+        const hasCredits = await onDeductCredits(AUTOPILOT_COST);
+        if (!hasCredits) {
+          interrupted = true;
+          break;
+        }
+
+        try {
+          const result = await runAutopilot(file.file, mode);
+          setStylePresets(result.stylePresets.map((preset) => ({ id: preset.id, name: preset.name })));
+
+          if (!result.enhancedFile) {
+            failed += 1;
+            addNotification(`${t.batch_error}: ${file.file.name}`, 'error');
+            continue;
+          }
+
+          const previousPreviewUrl = file.previewUrl.startsWith('blob:') && file.previewUrl !== file.originalPreviewUrl
+            ? file.previewUrl
+            : null;
+          const previewUrl = URL.createObjectURL(result.enhancedFile);
+          onSetFiles(
+            (current) => current.map((currentFile) => (
+              currentFile.id === file.id
+                ? { ...currentFile, file: result.enhancedFile!, previewUrl }
+                : currentFile
+            )),
+            `${t.aicc_title}: ${file.file.name}`
+          );
+          if (previousPreviewUrl) {
+            setTimeout(() => URL.revokeObjectURL(previousPreviewUrl), 0);
+          }
+          succeeded += 1;
+        } catch (error) {
+          failed += 1;
+          const message = error instanceof Error ? error.message : '';
+          if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal?.();
+            addNotification(t.msg_api_missing, 'error');
+            interrupted = true;
+            break;
+          }
+          addNotification(`${t.batch_error}: ${file.file.name}`, 'error');
+        } finally {
+          processed += 1;
+          setBatchProgress({ current: processed, total, activeFileName: file.file.name });
+        }
       }
-      addNotification(t.msg_success, 'info');
-    } catch (e) {
-      const message = e instanceof Error ? e.message : '';
-      if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
-        onOpenApiKeyModal?.();
+
+      if (succeeded === total && failed === 0 && !interrupted) {
+        addNotification(`${t.batch_complete} (${succeeded}/${total})`, 'info');
+      } else if (succeeded > 0) {
+        addNotification(`${t.aicc_batch_partial} (${succeeded}/${total})`, 'info');
+      } else if (failed > 0 && !interrupted) {
+        addNotification(`${t.aicc_batch_failed} (${failed}/${total})`, 'error');
       }
-      addNotification(t.msg_error, 'error');
     } finally {
       setIsRunning(false);
+      setBatchProgress(null);
     }
-  }, [activeFile, addNotification, mode, onDeductCredits, onOpenApiKeyModal, onSetFiles, t.msg_error, t.msg_success]);
+  }, [
+    addNotification,
+    mode,
+    onDeductCredits,
+    onOpenApiKeyModal,
+    onSetFiles,
+    selectedFiles,
+    t.aicc_batch_failed,
+    t.aicc_batch_partial,
+    t.aicc_title,
+    t.batch_complete,
+    t.batch_error,
+    t.msg_api_missing,
+  ]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-void text-text-primary">
@@ -119,8 +240,9 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
               <label className="text-[11px] text-text-secondary uppercase tracking-widest">{t.aicc_source_file}</label>
               <select
                 value={activeFileId || ''}
-                onChange={(e) => onSetActiveFileId(e.target.value)}
-                className="mt-2 w-full bg-elevated border border-border-subtle px-3 py-2 text-xs text-text-primary"
+                onChange={(e) => onSetActiveFileId(e.target.value || null)}
+                disabled={isRunning}
+                className="mt-2 w-full bg-elevated border border-border-subtle px-3 py-2 text-xs text-text-primary disabled:opacity-60"
               >
                 {files.length === 0 && <option value="">{t.aicc_no_files}</option>}
                 {files.map((file) => (
@@ -129,6 +251,89 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="border border-border-subtle bg-elevated p-4 mb-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] text-text-secondary uppercase tracking-widest">{t.batch_select}</span>
+                <span className="text-[11px] text-text-secondary uppercase tracking-widest">
+                  {selectedFiles.length} {t.batch_selected}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  disabled={isRunning || files.length === 0}
+                  className="border border-border-subtle bg-surface px-3 py-2 text-[11px] uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-accent disabled:opacity-50"
+                >
+                  {t.batch_select_all}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  disabled={isRunning || selectedFiles.length === 0}
+                  className="border border-border-subtle bg-surface px-3 py-2 text-[11px] uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-accent disabled:opacity-50"
+                >
+                  {t.batch_deselect_all}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectActiveOnly}
+                  disabled={isRunning || !activeFileId}
+                  className="border border-border-subtle bg-surface px-3 py-2 text-[11px] uppercase tracking-widest text-text-secondary hover:text-text-primary hover:border-accent disabled:opacity-50"
+                >
+                  {t.aicc_select_active_only}
+                </button>
+              </div>
+              <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {files.length === 0 && (
+                  <div className="border border-dashed border-border-subtle px-4 py-5 text-sm text-text-secondary">
+                    {t.aicc_no_files}
+                  </div>
+                )}
+                {files.map((file) => {
+                  const isSelected = selectedFileIds.includes(file.id);
+                  const isActive = file.id === activeFileId;
+                  const isEnhanced = file.previewUrl !== file.originalPreviewUrl;
+
+                  return (
+                    <div
+                      key={file.id}
+                      className={`border p-2 transition-none ${
+                        isActive ? 'border-accent bg-surface' : 'border-border-subtle bg-surface'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleFileSelection(file.id)}
+                          disabled={isRunning}
+                          className="h-4 w-4 accent-cyan-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onSetActiveFileId(file.id)}
+                          disabled={isRunning}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-not-allowed"
+                        >
+                          <img
+                            src={file.previewUrl}
+                            alt={file.file.name}
+                            className="h-14 w-14 shrink-0 border border-border-subtle bg-void object-cover"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-xs font-semibold text-text-primary">{file.file.name}</div>
+                            <div className="mt-1 text-[10px] uppercase tracking-widest text-text-secondary">
+                              {isEnhanced ? t.aicc_ai_enhanced : t.aicc_original}
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             {activeFile && enhancedPreviewUrl ? (
               <div className="aspect-[4/3] border border-border-subtle bg-elevated overflow-hidden">
@@ -188,14 +393,33 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
             </div>
             <MagneticButton
               className="mt-5 w-full py-3 font-bold text-void bg-accent flex items-center justify-center gap-2 disabled:opacity-50"
-              disabled={isRunning || !activeFile}
-              aria-disabled={isRunning || !activeFile}
+              disabled={isRunning || selectedFiles.length === 0}
+              aria-disabled={isRunning || selectedFiles.length === 0}
               onClick={handleRun}
             >
               <SparklesIcon className="w-4 h-4" />
-              {isRunning ? t.aicc_running : t.aicc_run_autopilot}
+              {isRunning
+                ? t.aicc_running
+                : selectedFiles.length > 1
+                  ? `${t.batch_run} ${selectedFiles.length}`
+                  : t.aicc_run_autopilot}
             </MagneticButton>
-            <p className="text-[11px] text-text-secondary mt-3">{t.credits_cost}: 3</p>
+            <p className="text-[11px] text-text-secondary mt-3">{t.credits_cost}: {totalCreditCost}</p>
+            {batchProgress && (
+              <div className="mt-3 border border-border-subtle bg-elevated p-3">
+                <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-widest text-text-secondary">
+                  <span>{t.batch_processing}</span>
+                  <span>{batchProgress.current}/{batchProgress.total}</span>
+                </div>
+                <div className="mt-2 h-1 w-full bg-surface">
+                  <div
+                    className="h-full bg-accent transition-none"
+                    style={{ width: `${batchProgress.total === 0 ? 0 : (batchProgress.current / batchProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-2 truncate text-xs text-text-primary">{batchProgress.activeFileName}</p>
+              </div>
+            )}
           </div>
 
           <div className="border border-border-subtle bg-surface p-5">
