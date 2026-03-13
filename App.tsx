@@ -241,6 +241,54 @@ function App() {
     }, 5000);
   }, []);
 
+  const prepareUploadedFiles = useCallback(async (selectedFiles: File[]) => {
+    const results = await Promise.allSettled(
+      selectedFiles.map(async (file): Promise<UploadedFile | null> => {
+        if (file.size === 0) {
+          addNotification(`Soubor ${file.name} je pr zdnì (0 bajt…). Zkontrolujte, zda je sta§en offline.`, 'error');
+          return null;
+        }
+
+        try {
+          const normalizedFile = await normalizeImageFile(file);
+          const previewUrl = URL.createObjectURL(normalizedFile);
+          return {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            file: normalizedFile,
+            previewUrl,
+            originalPreviewUrl: previewUrl,
+          };
+        } catch (error) {
+          console.error('File processing error:', error);
+          addNotification(`${t.msg_error}: ${file.name}`, 'error');
+          return null;
+        }
+      })
+    );
+
+    return results
+      .filter((result): result is PromiseFulfilledResult<UploadedFile> => result.status === 'fulfilled' && result.value !== null)
+      .map((result) => result.value);
+  }, [addNotification, t.msg_error]);
+
+  const syncFilesToCurrentProject = useCallback((newFiles: UploadedFile[], description: string) => {
+    if (!currentProject || newFiles.length === 0) return;
+
+    updateProject(currentProject.id, {
+      files: [...currentProject.files, ...newFiles],
+      status: 'editing',
+      activity: [
+        ...currentProject.activity,
+        {
+          id: `a-${Date.now()}`,
+          type: 'uploaded',
+          timestamp: new Date().toISOString(),
+          description,
+        },
+      ],
+    });
+  }, [currentProject, updateProject]);
+
   const cleanupFileUrls = useCallback((filesToClean: UploadedFile[]) => {
     filesToClean.forEach(file => {
       if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
@@ -306,6 +354,8 @@ function App() {
   }, [files.length, addNotification, t.editor_no_image, projects, setCurrentProject, setFiles]);
 
   const handleFilesSelected = useCallback(async (selectedFiles: File[]) => {
+    const validFiles = await prepareUploadedFiles(selectedFiles);
+    /*
     const results = await Promise.allSettled(
       selectedFiles.map(async (file): Promise<UploadedFile | null> => {
         if (file.size === 0) {
@@ -332,6 +382,7 @@ function App() {
     const validFiles = results
       .filter((r): r is PromiseFulfilledResult<UploadedFile> => r.status === 'fulfilled' && r.value !== null)
       .map(r => r.value);
+    */
 
     if (validFiles.length > 0) {
       setFiles(
@@ -340,23 +391,9 @@ function App() {
       );
       setShowTemplateModal(true); // Open Pipeline context selector
       addNotification(`${validFiles.length} ${t.notify_upload_success}`, 'info');
-      if (currentProject) {
-        updateProject(currentProject.id, {
-          files: [...currentProject.files, ...validFiles],
-          status: 'editing',
-          activity: [
-            ...currentProject.activity,
-            {
-              id: `a-${Date.now()}`,
-              type: 'uploaded',
-              timestamp: new Date().toISOString(),
-              description: `${validFiles.length} ${t.notify_upload_success}`,
-            },
-          ],
-        });
-      }
+      syncFilesToCurrentProject(validFiles, `${validFiles.length} ${t.notify_upload_success}`);
     }
-  }, [addNotification, setFiles, t.msg_error, t.notify_upload_success, currentProject, updateProject]);
+  }, [addNotification, prepareUploadedFiles, setFiles, syncFilesToCurrentProject, t.notify_upload_success]);
 
   const handleTemplateSelect = (template: JobTemplate) => {
     setCurrentJobTemplate(template);
@@ -395,9 +432,22 @@ function App() {
     setActiveAction({ action: 'base-edit', timestamp: Date.now() });
   }, [cleanupFileUrls, setFiles]);
   
-  const handleRawFilesConverted = useCallback((files: File[]) => {
-      handleFilesSelected(files);
-  }, [handleFilesSelected]);
+  const handleRawFilesConverted = useCallback(async (convertedRawFiles: File[]) => {
+      const validFiles = await prepareUploadedFiles(convertedRawFiles);
+
+      if (validFiles.length === 0) return;
+
+      setFiles(
+        currentFiles => [...currentFiles, ...validFiles],
+        `RAW converted ${validFiles.length} files`
+      );
+      setActiveFileId(validFiles[0].id);
+      setActiveAction({ action: 'base-edit', timestamp: Date.now() });
+      setShowTemplateModal(false);
+      setView('editor');
+      addNotification(t.raw_opened_editor, 'info');
+      syncFilesToCurrentProject(validFiles, t.raw_opened_editor);
+  }, [addNotification, prepareUploadedFiles, setFiles, syncFilesToCurrentProject, t.raw_opened_editor]);
 
   const getPipelineStep = (): WorkflowStep => {
     if (view === 'upload' || view === 'raw-converter') return 'import';

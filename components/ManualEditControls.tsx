@@ -39,9 +39,11 @@ interface ManualEditControlsProps {
   edits: ManualEdits;
   onEditChange: <K extends keyof ManualEdits>(key: K, value: ManualEdits[K]) => void;
   onReset: () => void;
-  exportOptions: { format: string; quality: number; scale: number };
-  onExportOptionsChange: (options: { format: string; quality: number; scale: number }) => void;
+  exportOptions: { format: 'jpeg' | 'png'; quality: number; scale: number };
+  onExportOptionsChange: (options: { format: 'jpeg' | 'png'; quality: number; scale: number }) => void;
   onRequestExport: () => void;
+  onRequestSaveAs?: () => void;
+  canUseNativeSave?: boolean;
   onStartManualCrop: () => void; // Trigger for classic crop
   onSnapshot: () => void; // Request to save current state to history
   cropRef?: React.RefObject<HTMLDivElement>;
@@ -58,6 +60,8 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
     exportOptions,
     onExportOptionsChange,
     onRequestExport,
+    onRequestSaveAs,
+    canUseNativeSave = false,
     onStartManualCrop,
     onSnapshot,
     cropRef,
@@ -260,13 +264,30 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
               </div>
           )}
 
-          <button 
-              onClick={onRequestExport} 
-              className="w-full flex items-center justify-center px-4 py-3 mt-4 border border-accent text-sm font-bold text-void bg-accent transition-none"
-          >
-              <ExportIcon className="w-4 h-4 mr-2" />
-              {t.manual_finish}
-          </button>
+          <div className="space-y-3 pt-2">
+              {canUseNativeSave && onRequestSaveAs && (
+                  <>
+                      <button 
+                          onClick={onRequestSaveAs} 
+                          className="w-full flex items-center justify-center px-4 py-3 border border-border-subtle text-sm font-bold text-text-primary bg-elevated transition-none"
+                      >
+                          <ExportIcon className="w-4 h-4 mr-2" />
+                          {t.export_save_as}
+                      </button>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                          {t.export_save_hint}
+                      </p>
+                  </>
+              )}
+
+              <button 
+                  onClick={onRequestExport} 
+                  className="w-full flex items-center justify-center px-4 py-3 border border-accent text-sm font-bold text-void bg-accent transition-none"
+              >
+                  <ExportIcon className="w-4 h-4 mr-2" />
+                  {t.manual_finish}
+              </button>
+          </div>
       </div>
     </div>
   );

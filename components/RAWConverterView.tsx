@@ -10,7 +10,7 @@ interface RAWConverterViewProps {
     onOpenApiKeyModal: () => void;
     onToggleSidebar: () => void;
     addNotification: (message: string, type?: 'info' | 'error') => void;
-    onFilesConverted: (files: File[]) => void;
+    onFilesConverted: (files: File[]) => Promise<void> | void;
 }
 
 interface ConvertedFile {
@@ -141,7 +141,8 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         setIsConverting(false);
 
         if (newConvertedFiles.length > 0) {
-            addNotification(`${t.raw_done}. ${newConvertedFiles.length} ${t.notify_raw_success}`, 'info');
+            const files = newConvertedFiles.map(cf => new File([cf.blob], cf.originalName, { type: 'image/jpeg' }));
+            await onFilesConverted(files);
         }
     };
 
@@ -312,6 +313,12 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             </button>
                         ) : (
                             <div className="flex flex-col gap-4">
+                                <button
+                                    onClick={handleAddToProject}
+                                    className="w-full inline-flex items-center justify-center px-6 py-4 border border-accent text-lg font-semibold text-void bg-accent transition-none"
+                                >
+                                    {t.raw_open_editor}
+                                </button>
                                 <button
                                     onClick={handleSaveToFolder}
                                     className="w-full inline-flex items-center justify-center px-6 py-4 border border-accent text-lg font-semibold text-void bg-accent transition-none"

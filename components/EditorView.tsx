@@ -25,6 +25,7 @@ import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AI
 import * as geminiService from '../services/geminiService';
 import { applyEditsAndExport } from '../utils/imageProcessor';
 import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
+import { buildEditedFileName, downloadBlob, saveBlobWithPicker, supportsNativeSavePicker, type SupportedExportFormat } from '../utils/fileSave';
 import { useTranslation } from '../contexts/LanguageContext';
 import { updateUserTendencies } from '../services/userProfileService';
 
@@ -72,7 +73,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
   const [manualEdits, setManualEdits] = useState<ManualEdits>(INITIAL_EDITS);
-  const [exportOptions, setExportOptions] = useState({ format: 'jpeg', quality: 90, scale: 1 });
+  const [exportOptions, setExportOptions] = useState<{ format: SupportedExportFormat; quality: number; scale: number }>({ format: 'jpeg', quality: 90, scale: 1 });
   const [isComparing, setIsComparing] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [autoCropSuggestions, setAutoCropSuggestions] = useState<AutoCropSuggestion[]>([]);
@@ -112,6 +113,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
+  const canUseNativeSave = supportsNativeSavePicker();
 
 
   useEffect(() => {
@@ -352,19 +354,22 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     }
   }, [activeFile, addNotification, onDeductCredits, onOpenApiKeyModal, trans.msg_error]);
 
+  const buildManualExportArtifact = useCallback(async () => {
+    if (!activeFile) {
+      throw new Error('NO_ACTIVE_FILE');
+    }
+
+    const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
+    const fileName = buildEditedFileName(activeFile.file.name, exportOptions.format);
+    return { blob, fileName };
+  }, [activeFile, manualEdits, exportOptions]);
+
   const handleManualExport = async () => {
     if (!activeFile) return;
     setIsLoading(true);
     try {
-        const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
-        const url = createTrackedUrl(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `edited_${activeFile.file.name.replace(/.[^/.]+$/, "")}.${exportOptions.format === 'jpeg' ? 'jpg' : 'png'}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        revokeTrackedUrl(url);
+        const { blob, fileName } = await buildManualExportArtifact();
+        downloadBlob(blob, fileName);
         addNotification(trans.msg_success, 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
@@ -374,6 +379,39 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         addNotification(trans.msg_error, 'error');
     }
     finally { setIsLoading(false); }
+  };
+
+  const handleManualSaveAs = async () => {
+    if (!activeFile) return;
+
+    setIsLoading(true);
+    setLoadingMessage(trans.export_save_as);
+
+    try {
+        const { blob, fileName } = await buildManualExportArtifact();
+
+        if (!canUseNativeSave) {
+            downloadBlob(blob, fileName);
+            addNotification(trans.export_native_fallback, 'info');
+            return;
+        }
+
+        await saveBlobWithPicker(blob, fileName, exportOptions.format);
+        addNotification(trans.export_saved_to_folder, 'info');
+    } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+            return;
+        }
+
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
   };
 
   const handleSnapshot = () => {
@@ -1030,6 +1068,15 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                             {activeFile && (
                                 <div className="pt-4 border-t border-border-subtle space-y-3">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Export</h4>
+                                    {canUseNativeSave && (
+                                        <button
+                                            onClick={handleManualSaveAs}
+                                            className="w-full py-3 bg-elevated text-text-primary text-sm font-bold border border-border-subtle rounded-xl flex items-center justify-center gap-2 transition-all hover:border-accent"
+                                        >
+                                            <ExportIcon className="w-4 h-4" />
+                                            {trans.export_save_as}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleManualExport}
                                         className="w-full py-3 bg-accent text-void text-sm font-bold border border-accent rounded-xl flex items-center justify-center gap-2 transition-all"
@@ -1051,6 +1098,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                            exportOptions={exportOptions}
                            onExportOptionsChange={setExportOptions}
                            onRequestExport={handleManualExport}
+                           onRequestSaveAs={handleManualSaveAs}
+                           canUseNativeSave={canUseNativeSave}
                            onStartManualCrop={() => {}}
                            onSnapshot={handleSnapshot}
                            cropRef={cropRef}
