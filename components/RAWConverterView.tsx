@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { UploadIcon, ArrowPathIcon, ExportIcon, XCircleIcon } from './icons';
 import Header from './Header';
-import { processRawFile, RAW_EXTENSIONS_STRING } from '../utils/rawProcessor';
+import { processRawFile, RAW_EXTENSIONS_STRING, type RawConvertOptions } from '../utils/rawProcessor';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface RAWConverterViewProps {
@@ -15,13 +15,23 @@ interface RAWConverterViewProps {
 
 interface ConvertedFile {
     originalName: string;
+    originalSize: number;
     blob: Blob;
     url: string;
     sizeLabel: string;
+    width: number;
+    height: number;
 }
 
+const RESOLUTION_PRESETS = [
+    { label: 'raw_res_original', value: 0 },
+    { label: '6000px', value: 6000 },
+    { label: '4000px', value: 4000 },
+    { label: '2000px', value: 2000 },
+    { label: '1200px', value: 1200 },
+];
 
-const RAWConverterView: React.FC<RAWConverterViewProps> = ({ 
+const RAWConverterView: React.FC<RAWConverterViewProps> = ({
     title,
     onOpenApiKeyModal,
     onToggleSidebar,
@@ -36,11 +46,16 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Conversion settings
+    const [quality, setQuality] = useState(92);
+    const [maxResolution, setMaxResolution] = useState(0);
+    const [autoSave, setAutoSave] = useState(true);
+
     const handleFileSelect = (files: FileList | null) => {
         if (files) {
             const newFiles = Array.from(files);
             setRawFiles(newFiles);
-            setConvertedFiles([]); // Clear previous results
+            setConvertedFiles([]);
         }
     };
 
@@ -50,56 +65,14 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         setIsDragging(false);
         handleFileSelect(e.dataTransfer.files);
     };
-    
-    const handleConvert = async () => {
-        if (rawFiles.length === 0) {
-            addNotification(t.raw_no_files, 'error');
-            return;
-        }
 
-        setIsConverting(true);
-        setProgress({ current: 0, total: rawFiles.length });
-        const newConvertedFiles: ConvertedFile[] = [];
-
-        for (const file of rawFiles) {
-            try {
-                const jpegFile = await processRawFile(file);
-                const sizeInMB = (jpegFile.size / (1024 * 1024)).toFixed(2);
-                
-                newConvertedFiles.push({
-                    originalName: jpegFile.name,
-                    blob: jpegFile,
-                    url: URL.createObjectURL(jpegFile),
-                    sizeLabel: `${sizeInMB} MB`,
-                });
-
-            } catch (error: any) {
-                console.error(error);
-                addNotification(`${t.msg_error} ${file.name}: ${error.message || 'Unknown error'}`, 'error');
-            } finally {
-                setProgress(prev => ({ ...prev, current: prev.current + 1 }));
-            }
-        }
-        
-        setConvertedFiles(newConvertedFiles);
-        setIsConverting(false);
-        if (newConvertedFiles.length > 0) {
-            addNotification(`${t.raw_done}. ${newConvertedFiles.length} ${t.notify_raw_success}`, 'info');
-        }
-    };
-
-    const handleAddToProject = () => {
-        const files = convertedFiles.map(cf => new File([cf.blob], cf.originalName, { type: 'image/jpeg' }));
-        onFilesConverted(files);
-    };
-
-    const handleSaveToFolder = async () => {
-        if (convertedFiles.length === 0) return;
+    const saveAllToFolder = async (files: ConvertedFile[]) => {
+        if (files.length === 0) return;
         try {
             // @ts-ignore - File System Access API (Chrome/Edge)
             const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
             let saved = 0;
-            for (const file of convertedFiles) {
+            for (const file of files) {
                 try {
                     const fileHandle = await dirHandle.getFileHandle(file.originalName, { create: true });
                     const writable = await fileHandle.createWritable();
@@ -121,6 +94,70 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         }
     };
 
+    const handleConvert = async () => {
+        if (rawFiles.length === 0) {
+            addNotification(t.raw_no_files, 'error');
+            return;
+        }
+
+        setIsConverting(true);
+        setProgress({ current: 0, total: rawFiles.length });
+        const newConvertedFiles: ConvertedFile[] = [];
+
+        const options: RawConvertOptions = { quality, maxResolution };
+
+        for (const file of rawFiles) {
+            try {
+                const jpegFile = await processRawFile(file, options);
+                const sizeInMB = (jpegFile.size / (1024 * 1024)).toFixed(2);
+
+                const url = URL.createObjectURL(jpegFile);
+                // Get dimensions from the converted file
+                const dims = await new Promise<{w: number, h: number}>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ w: img.width, h: img.height });
+                    img.onerror = () => resolve({ w: 0, h: 0 });
+                    img.src = url;
+                });
+
+                newConvertedFiles.push({
+                    originalName: jpegFile.name,
+                    originalSize: file.size,
+                    blob: jpegFile,
+                    url,
+                    sizeLabel: `${sizeInMB} MB`,
+                    width: dims.w,
+                    height: dims.h,
+                });
+
+            } catch (error: any) {
+                console.error(error);
+                addNotification(`${t.msg_error} ${file.name}: ${error.message || 'Unknown error'}`, 'error');
+            } finally {
+                setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+            }
+        }
+
+        setConvertedFiles(newConvertedFiles);
+        setIsConverting(false);
+
+        if (newConvertedFiles.length > 0) {
+            addNotification(`${t.raw_done}. ${newConvertedFiles.length} ${t.notify_raw_success}`, 'info');
+
+            // Auto-save: immediately open folder picker
+            if (autoSave) {
+                await saveAllToFolder(newConvertedFiles);
+            }
+        }
+    };
+
+    const handleAddToProject = () => {
+        const files = convertedFiles.map(cf => new File([cf.blob], cf.originalName, { type: 'image/jpeg' }));
+        onFilesConverted(files);
+    };
+
+    const handleSaveToFolder = () => saveAllToFolder(convertedFiles);
+
     const downloadFile = (url: string, name: string) => {
         const link = document.createElement('a');
         link.href = url;
@@ -130,14 +167,19 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         document.body.removeChild(link);
     };
 
+    const formatSize = (bytes: number) => {
+        if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        return `${(bytes / 1024).toFixed(0)} KB`;
+    };
+
     return (
         <div className="h-full w-full flex flex-col">
-             <Header 
-                title={title} 
+             <Header
+                title={title}
                 onOpenApiKeyModal={onOpenApiKeyModal}
                 onToggleSidebar={onToggleSidebar}
             />
-            
+
             <div className="flex-1 flex flex-col items-center p-4 sm:p-8 overflow-y-auto">
                 <div className="w-full max-w-6xl">
                      <div className="text-center mb-10">
@@ -149,7 +191,9 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
 
                     <div className="bg-surface p-8 border border-border-subtle">
                     {convertedFiles.length === 0 ? (
-                        <div 
+                        <>
+                        {/* Drop zone */}
+                        <div
                             onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
                             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
@@ -159,7 +203,7 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             <div className="text-center">
                                 <UploadIcon className="mx-auto h-12 w-12 text-text-secondary" />
                                 <p className="mt-4 font-semibold text-text-primary">
-                                    {rawFiles.length > 0 ? `${rawFiles.length} files selected` : t.raw_drag}
+                                    {rawFiles.length > 0 ? `${rawFiles.length} ${t.raw_files_selected || 'files selected'}` : t.raw_drag}
                                 </p>
                                 <p className="text-sm text-text-secondary">{t.raw_or_click}</p>
                                 <input
@@ -179,21 +223,94 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                 </button>
                             </div>
                         </div>
+
+                        {/* Settings panel - visible when files are selected */}
+                        {rawFiles.length > 0 && (
+                            <div className="mt-6 p-5 bg-elevated border border-border-subtle rounded-lg">
+                                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider mb-4">
+                                    {t.raw_settings || 'Nastaveni konverze'}
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                    {/* Quality slider */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                                            {t.raw_quality || 'Kvalita JPEG'}: <span className="text-accent font-bold">{quality}%</span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min={10}
+                                            max={100}
+                                            step={1}
+                                            value={quality}
+                                            onChange={(e) => setQuality(Number(e.target.value))}
+                                            className="w-full h-2 bg-void rounded-lg appearance-none cursor-pointer accent-accent"
+                                        />
+                                        <div className="flex justify-between text-xs text-text-secondary mt-1">
+                                            <span>{t.raw_quality_small || 'Mensi'}</span>
+                                            <span>{t.raw_quality_best || 'Nejlepsi'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Resolution select */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                                            {t.raw_resolution || 'Rozliseni'}
+                                        </label>
+                                        <select
+                                            value={maxResolution}
+                                            onChange={(e) => setMaxResolution(Number(e.target.value))}
+                                            className="w-full px-3 py-2 bg-void border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:border-accent"
+                                        >
+                                            {RESOLUTION_PRESETS.map(p => (
+                                                <option key={p.value} value={p.value}>
+                                                    {p.value === 0 ? (t.raw_res_original || 'Original') : p.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Auto-save toggle */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">
+                                            {t.raw_auto_save || 'Po konverzi'}
+                                        </label>
+                                        <button
+                                            onClick={() => setAutoSave(!autoSave)}
+                                            className={`w-full px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
+                                                autoSave
+                                                    ? 'border-accent bg-accent/10 text-accent'
+                                                    : 'border-border-subtle bg-void text-text-secondary'
+                                            }`}
+                                        >
+                                            <ExportIcon className="inline w-4 h-4 mr-2 -mt-0.5" />
+                                            {autoSave
+                                                ? (t.raw_auto_save_on || 'Ulozit hned do slozky')
+                                                : (t.raw_auto_save_off || 'Rucne ulozit pozdeji')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        </>
                     ) : (
                         <div>
-                            <h3 className="text-xl font-bold mb-4">{t.raw_done}</h3>
+                            <h3 className="text-xl font-bold mb-2">{t.raw_done}</h3>
+                            <p className="text-sm text-text-secondary mb-4">
+                                {t.raw_quality || 'Kvalita'}: {quality}% | {t.raw_resolution || 'Rozliseni'}: {maxResolution === 0 ? (t.raw_res_original || 'Original') : `${maxResolution}px`}
+                            </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {convertedFiles.map((file) => (
                                     <div key={file.originalName} className="group relative aspect-square bg-elevated rounded-lg overflow-hidden shadow-md border border-border-subtle/50">
                                         <img src={file.url} alt={file.originalName} className="w-full h-full object-contain" />
                                         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                                                 <div className="px-2 py-1 bg-void border border-border-subtle text-text-secondary text-xs flex flex-col items-end">
-                                                    <span className="opacity-70 text-[10px]">{file.sizeLabel}</span>
+                                                    <span className="font-medium text-text-primary">{file.width}x{file.height}</span>
+                                                    <span className="opacity-70 text-[10px]">{formatSize(file.originalSize)} → {file.sizeLabel}</span>
                                                 </div>
                                         </div>
-                                        
+
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => downloadFile(file.url, file.originalName)} className="p-3 bg-elevated border border-border-subtle text-text-primary transition-none" title="Stáhnout">
+                                            <button onClick={() => downloadFile(file.url, file.originalName)} className="p-3 bg-elevated border border-border-subtle text-text-primary transition-none" title="Download">
                                                 <ExportIcon className="w-8 h-8" />
                                             </button>
                                         </div>

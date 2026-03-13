@@ -138,10 +138,75 @@ export interface ProcessedRawFile {
     sourceMethod: string;
 }
 
+export interface RawConvertOptions {
+    quality: number;       // 1-100, JPEG quality
+    maxResolution: number; // 0 = original, otherwise max long edge in px
+}
+
+const DEFAULT_OPTIONS: RawConvertOptions = { quality: 92, maxResolution: 0 };
+
 /**
- * Main function to process a RAW file and extract the best JPEG preview.
+ * Re-encodes image blob through Canvas with specified quality and resolution.
+ * This is REAL processing - pixel data goes through decode → canvas → JPEG encode.
  */
-export const processRawFile = async (file: File): Promise<File> => {
+const reEncodeBlob = (sourceBlob: Blob, options: RawConvertOptions): Promise<{ blob: Blob; width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(sourceBlob);
+        const img = new Image();
+        img.onload = () => {
+            let { width, height } = img;
+
+            // Resize if maxResolution is set
+            if (options.maxResolution > 0 && (width > options.maxResolution || height > options.maxResolution)) {
+                if (width > height) {
+                    height = Math.round((height * options.maxResolution) / width);
+                    width = options.maxResolution;
+                } else {
+                    width = Math.round((width * options.maxResolution) / height);
+                    height = options.maxResolution;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                URL.revokeObjectURL(url);
+                return reject(new Error('Canvas context failed'));
+            }
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const jpegQuality = Math.max(0.01, Math.min(1, options.quality / 100));
+            canvas.toBlob(
+                (result) => {
+                    URL.revokeObjectURL(url);
+                    if (result) {
+                        resolve({ blob: result, width, height });
+                    } else {
+                        reject(new Error('JPEG encoding failed'));
+                    }
+                },
+                'image/jpeg',
+                jpegQuality
+            );
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Failed to decode image'));
+        };
+        img.src = url;
+    });
+};
+
+/**
+ * Main function to process a RAW file.
+ * Extracts embedded preview, then re-encodes through Canvas with quality/resize control.
+ */
+export const processRawFile = async (file: File, options: RawConvertOptions = DEFAULT_OPTIONS): Promise<File> => {
     const exifr = await getExifr();
     const candidates: ImageCandidate[] = [];
 
@@ -187,8 +252,11 @@ export const processRawFile = async (file: File): Promise<File> => {
     candidates.sort((a, b) => b.resolution - a.resolution);
     const bestCandidate = candidates[0];
 
+    // 5. Re-encode through Canvas (real processing - not just extracting embedded JPEG)
+    const { blob: processedBlob, width, height } = await reEncodeBlob(bestCandidate.blob, options);
+
     const newFileName = file.name.replace(/\.[^/.]+$/, ".jpg");
-    return new File([bestCandidate.blob], newFileName, { type: 'image/jpeg' });
+    return new File([processedBlob], newFileName, { type: 'image/jpeg' });
 };
 
 export const isRawFile = (file: File): boolean => {
