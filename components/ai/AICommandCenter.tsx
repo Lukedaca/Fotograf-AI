@@ -44,6 +44,7 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EnhancementMode>('auto');
+  const [smartAutoCrop, setSmartAutoCrop] = useState(true);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
@@ -149,7 +150,7 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
         }
 
         try {
-          const result = await runAutopilot(file.file, mode);
+          const result = await runAutopilot(file.file, mode, { autoCrop: smartAutoCrop });
           setStylePresets(result.stylePresets.map((preset) => ({ id: preset.id, name: preset.name })));
 
           if (!result.enhancedFile) {
@@ -208,6 +209,7 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
     onOpenApiKeyModal,
     onSetFiles,
     selectedFiles,
+    smartAutoCrop,
     t.aicc_batch_failed,
     t.aicc_batch_partial,
     t.aicc_title,
@@ -390,6 +392,26 @@ const AICommandCenter: React.FC<AICommandCenterProps> = ({
                   {option.label}
                 </button>
               ))}
+            </div>
+            <div className="mt-4 border border-border-subtle bg-elevated p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-widest text-text-secondary">{t.aicc_autocrop_label}</div>
+                  <p className="mt-1 text-xs text-text-secondary">{t.aicc_autocrop_hint}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSmartAutoCrop((current) => !current)}
+                  disabled={isRunning}
+                  className={`border px-3 py-2 text-[11px] font-bold uppercase tracking-widest disabled:opacity-50 ${
+                    smartAutoCrop
+                      ? 'border-accent bg-surface text-text-primary'
+                      : 'border-border-subtle bg-surface text-text-secondary'
+                  }`}
+                >
+                  {smartAutoCrop ? t.aicc_autocrop_on : t.aicc_autocrop_off}
+                </button>
+              </div>
             </div>
             <MagneticButton
               className="mt-5 w-full py-3 font-bold text-void bg-accent flex items-center justify-center gap-2 disabled:opacity-50"

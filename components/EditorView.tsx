@@ -23,6 +23,7 @@ import {
 } from './icons';
 import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType, AutoCropSuggestion, QualityAssessment } from '../types';
 import * as geminiService from '../services/geminiService';
+import { runAutopilot } from '../services/aiAutopilot';
 import { applyEditsAndExport } from '../utils/imageProcessor';
 import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
 import {
@@ -297,7 +298,11 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     setIsLoading(true);
     setLoadingMessage(trans.editor_ai_enhancing);
     try {
-        const { file: newFile } = await geminiService.autopilotImage(activeFile.file);
+        const result = await runAutopilot(activeFile.file, 'auto', { autoCrop: true });
+        const newFile = result.enhancedFile;
+        if (!newFile) {
+            throw new Error('AUTOPILOT_EMPTY_RESULT');
+        }
         const url = createTrackedUrl(newFile);
         onSetFiles(current => current.map(f => f.id === activeFileId ? { ...f, file: newFile, previewUrl: url } : f), 'AI Autopilot');
         try {

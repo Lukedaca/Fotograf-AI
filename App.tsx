@@ -112,6 +112,11 @@ function App() {
   const [currentClientId, setCurrentClientId] = useState<string | null>(null);
   const [galleryProjectId, setGalleryProjectId] = useState<string | null>(null);
   const creditOperationInProgress = useRef(false);
+  const filesRef = useRef(files);
+  const activeFileIdRef = useRef(activeFileId);
+
+  filesRef.current = files;
+  activeFileIdRef.current = activeFileId;
 
   // --- Effects ---
 
@@ -223,15 +228,17 @@ function App() {
   };
 
   const setFiles = useCallback((newState: UploadedFile[] | ((prevState: UploadedFile[]) => UploadedFile[]), actionName: string) => {
-    const newFiles = typeof newState === 'function' ? newState(files) : newState;
+    const previousFiles = filesRef.current;
+    const newFiles = typeof newState === 'function' ? newState(previousFiles) : newState;
     dispatchHistory({ type: 'SET', payload: { state: newFiles, actionName } });
-    if (newFiles.length > 0 && (!activeFileId || !newFiles.find(f => f.id === activeFileId))) {
+    const currentActiveFileId = activeFileIdRef.current;
+    if (newFiles.length > 0 && (!currentActiveFileId || !newFiles.find(f => f.id === currentActiveFileId))) {
       setActiveFileId(newFiles[0].id);
     }
     if (newFiles.length === 0) {
       setActiveFileId(null);
     }
-  }, [files, activeFileId]);
+  }, []);
 
   const addNotification = useCallback((message: string, type: 'info' | 'error' = 'info') => {
     const id = Date.now();

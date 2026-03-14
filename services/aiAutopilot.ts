@@ -1,7 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
-import type { AIAutopilotResult, EnhancementMode, ManualEdits } from '../types';
-import { base64ToFile, fileToBase64 } from '../utils/imageProcessor';
+import type { AIAutopilotResult, AutoCropResult, AutoCropSuggestion, CropCoordinates, EnhancementMode, ManualEdits } from '../types';
+import { applyEditsAndExport, base64ToFile, fileToBase64 } from '../utils/imageProcessor';
 import { getApiKey } from '../utils/apiKey';
+import { getImageDimensionsFromBlob } from '../utils/aiGallery';
+import { analyzeForAutoCrop } from './geminiService';
 import { getUserProfile } from './userProfileService';
 
 const getGenAI = () => {
@@ -108,7 +110,145 @@ const createStylePresets = (mode: EnhancementMode) => {
   return base;
 };
 
-export const runAutopilot = async (file: File, mode: EnhancementMode): Promise<AIAutopilotResult> => {
+const ASPECT_RATIO_VALUE: Record<AutoCropSuggestion['aspectRatio'], number> = {
+  '1:1': 1,
+  '4:3': 4 / 3,
+  '3:2': 3 / 2,
+  '16:9': 16 / 9,
+};
+
+type AutopilotOptions = {
+  autoCrop?: boolean;
+};
+
+type CropCandidateScore = {
+  suggestion: AutoCropSuggestion;
+  safeCoverage: number;
+  subjectCoverage: number;
+  faceCoverage: number;
+  areaRatio: number;
+  score: number;
+};
+
+const rectArea = (rect?: CropCoordinates | null) => {
+  if (!rect) return 0;
+  return Math.max(0, rect.width) * Math.max(0, rect.height);
+};
+
+const intersectionArea = (a?: CropCoordinates | null, b?: CropCoordinates | null) => {
+  if (!a || !b) return 0;
+
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.width, b.x + b.width);
+  const y2 = Math.min(a.y + a.height, b.y + b.height);
+
+  if (x2 <= x1 || y2 <= y1) return 0;
+  return (x2 - x1) * (y2 - y1);
+};
+
+const getCoverage = (container: CropCoordinates, target?: CropCoordinates | null) => {
+  const targetArea = rectArea(target);
+  if (!targetArea || !target) return 1;
+  return intersectionArea(container, target) / targetArea;
+};
+
+const getModeAspectBoost = (mode: EnhancementMode, aspectRatio: AutoCropSuggestion['aspectRatio']) => {
+  if (mode === 'social-media') {
+    if (aspectRatio === '1:1') return 0.12;
+    if (aspectRatio === '4:3') return 0.06;
+  }
+  if (mode === 'portrait') {
+    if (aspectRatio === '4:3') return 0.08;
+    if (aspectRatio === '3:2') return 0.04;
+  }
+  if (mode === 'landscape' || mode === 'real-estate') {
+    if (aspectRatio === '16:9') return 0.06;
+    if (aspectRatio === '3:2') return 0.04;
+  }
+  return 0;
+};
+
+const pickAutocropSuggestion = (
+  cropResult: AutoCropResult,
+  dimensions: { width: number; height: number },
+  mode: EnhancementMode
+): CropCandidateScore | null => {
+  const sourceRatio = dimensions.width / Math.max(1, dimensions.height);
+  const imageArea = Math.max(1, dimensions.width * dimensions.height);
+
+  const ranked = cropResult.suggestedCrops
+    .map((suggestion): CropCandidateScore => {
+      const ratioDiff = Math.abs(ASPECT_RATIO_VALUE[suggestion.aspectRatio] - sourceRatio);
+      const ratioScore = Math.max(0, 1 - Math.min(1, ratioDiff / sourceRatio));
+      const safeCoverage = getCoverage(suggestion.rect, cropResult.safeZone);
+      const subjectCoverage = getCoverage(suggestion.rect, cropResult.mainSubject);
+      const faceCoverage = getCoverage(suggestion.rect, cropResult.facesBoundingBox || null);
+      const areaRatio = rectArea(suggestion.rect) / imageArea;
+      const areaScore = areaRatio > 0.98 ? 0.05 : Math.max(0, 1 - Math.abs(areaRatio - 0.82));
+
+      const score =
+        suggestion.confidence * 0.42 +
+        safeCoverage * 0.2 +
+        subjectCoverage * 0.18 +
+        faceCoverage * 0.08 +
+        ratioScore * 0.07 +
+        areaScore * 0.05 +
+        getModeAspectBoost(mode, suggestion.aspectRatio);
+
+      return {
+        suggestion,
+        safeCoverage,
+        subjectCoverage,
+        faceCoverage,
+        areaRatio,
+        score,
+      };
+    })
+    .sort((left, right) => right.score - left.score);
+
+  const best = ranked[0];
+  if (!best) return null;
+
+  const isMeaningfulCrop = best.areaRatio <= 0.97;
+  const isConfident = best.suggestion.confidence >= 0.5;
+  const keepsImportantContent = best.safeCoverage >= 0.88 && best.subjectCoverage >= 0.9;
+
+  if (!isMeaningfulCrop || !isConfident || !keepsImportantContent) {
+    return null;
+  }
+
+  return best;
+};
+
+const buildCroppedFile = async (
+  file: File,
+  cropRect: CropCoordinates,
+  preferredFormat: 'jpeg' | 'png'
+) => {
+  const previewUrl = URL.createObjectURL(file);
+
+  try {
+    const blob = await applyEditsAndExport(previewUrl, { ...emptyEdits, cropRect }, {
+      format: preferredFormat,
+      quality: 92,
+      scale: 1,
+    });
+
+    const extension = preferredFormat === 'png' ? 'png' : 'jpg';
+    const baseName = file.name.replace(/\.[^/.]+$/, '');
+    return new File([blob], `${baseName}.${extension}`, { type: blob.type || file.type });
+  } finally {
+    URL.revokeObjectURL(previewUrl);
+  }
+};
+
+export const runAutopilot = async (
+  file: File,
+  mode: EnhancementMode,
+  options: AutopilotOptions = {}
+): Promise<AIAutopilotResult> => {
+  const { autoCrop = true } = options;
   const ai = getGenAI();
   const base64Image = await fileToBase64(file);
   const prompt = createPrompt(mode);
@@ -123,19 +263,42 @@ export const runAutopilot = async (file: File, mode: EnhancementMode): Promise<A
   });
 
   const imagePart = getInlineImageData(response);
-  const enhancedFile = await base64ToFile(imagePart.data, `autopilot_${file.name}`, imagePart.mimeType);
+  let enhancedFile = await base64ToFile(imagePart.data, `autopilot_${file.name}`, imagePart.mimeType);
+  let appliedEdits: ManualEdits = { ...emptyEdits };
+  let compositionSuggestion = 'Kompozice zachována';
+  let compositionScore = 0;
+  const nextSuggestions: string[] = [];
+
+  if (autoCrop) {
+    try {
+      const dimensions = await getImageDimensionsFromBlob(enhancedFile);
+      const cropResult = await analyzeForAutoCrop(enhancedFile, dimensions);
+      const bestCrop = pickAutocropSuggestion(cropResult, dimensions, mode);
+
+      if (bestCrop) {
+        const preferredFormat = enhancedFile.type === 'image/png' ? 'png' : 'jpeg';
+        enhancedFile = await buildCroppedFile(enhancedFile, bestCrop.suggestion.rect, preferredFormat);
+        appliedEdits = { ...emptyEdits, cropRect: bestCrop.suggestion.rect };
+        compositionScore = Math.round(bestCrop.score * 100);
+        compositionSuggestion = `Smart crop ${bestCrop.suggestion.aspectRatio}`;
+        nextSuggestions.push(`Auto-crop ${bestCrop.suggestion.aspectRatio}`);
+      }
+    } catch (error) {
+      console.warn('Smart autocrop skipped:', error);
+    }
+  }
 
   return {
     enhancedImageBase64: imagePart.data,
     enhancedFile,
-    appliedEdits: emptyEdits,
+    appliedEdits,
     analysis: {
       exposure: { value: 0, suggestion: 'Analyzuji' },
       colors: { temperature: 0, saturation: 0, suggestion: 'Analyzuji' },
-      composition: { score: 0, suggestion: 'Analyzuji' },
+      composition: { score: compositionScore, suggestion: compositionSuggestion },
       sharpness: { value: 0, suggestion: 'Analyzuji' },
     },
     stylePresets: createStylePresets(mode),
-    nextSuggestions: [],
+    nextSuggestions,
   };
 };
