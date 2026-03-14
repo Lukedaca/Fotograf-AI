@@ -42,7 +42,9 @@ interface ManualEditControlsProps {
   exportOptions: { format: 'jpeg' | 'png'; quality: number; scale: number };
   onExportOptionsChange: (options: { format: 'jpeg' | 'png'; quality: number; scale: number }) => void;
   onRequestExport: () => void;
+  onRequestBatchExport?: () => void;
   onRequestSaveAs?: () => void;
+  canBatchExport?: boolean;
   canUseNativeSave?: boolean;
   onStartManualCrop: () => void; // Trigger for classic crop
   onSnapshot: () => void; // Request to save current state to history
@@ -60,7 +62,9 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
     exportOptions,
     onExportOptionsChange,
     onRequestExport,
+    onRequestBatchExport,
     onRequestSaveAs,
+    canBatchExport = false,
     canUseNativeSave = false,
     onStartManualCrop,
     onSnapshot,
@@ -276,6 +280,21 @@ const ManualEditControls: React.FC<ManualEditControlsProps> = ({
                       </button>
                       <p className="text-[11px] leading-relaxed text-text-secondary">
                           {t.export_save_hint}
+                      </p>
+                  </>
+              )}
+
+              {canBatchExport && onRequestBatchExport && (
+                  <>
+                      <button
+                          onClick={onRequestBatchExport}
+                          className="w-full flex items-center justify-center px-4 py-3 border border-border-subtle text-sm font-bold text-text-primary bg-elevated transition-none"
+                      >
+                          <ExportIcon className="w-4 h-4 mr-2" />
+                          {t.export_save_all_as}
+                      </button>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                          {t.export_batch_hint}
                       </p>
                   </>
               )}

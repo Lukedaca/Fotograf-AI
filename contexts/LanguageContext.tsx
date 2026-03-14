@@ -245,6 +245,11 @@ const translations = {
     export_download: "Stáhnout obrázek",
     export_save_as: "Uložit jako...",
     export_save_hint: "Otevře systémové uložení, kde vyberete složku i název výsledného souboru.",
+    export_save_all_as: "Uložit vše do složky",
+    export_batch_hint: "Vyexportuje všechny fotky v aktuální sadě. Když prohlížeč neumí zvolit složku, stáhne soubory po jednom.",
+    export_batch_processing: "Exportuji dávku...",
+    export_batch_saved_to_folder: "souborů bylo uloženo do vybrané složky.",
+    export_batch_native_fallback: "Tento prohlížeč neumí přímý batch export do složky. Spouštím stažení jednotlivých souborů.",
     export_saved_to_folder: "Soubor byl uložen do vybrané složky.",
     export_native_fallback: "Tento prohlížeč neumí přímé uložení do složky. Spouštím klasické stažení.",
 
@@ -723,6 +728,11 @@ const translations = {
     export_download: "Download",
     export_save_as: "Save As...",
     export_save_hint: "Opens the native save dialog so you can pick the folder and final file name.",
+    export_save_all_as: "Save all to folder",
+    export_batch_hint: "Exports every photo in the current set. If the browser cannot pick a folder, files are downloaded one by one.",
+    export_batch_processing: "Exporting batch...",
+    export_batch_saved_to_folder: "files were saved to the selected folder.",
+    export_batch_native_fallback: "This browser cannot export a full batch directly to a folder. Falling back to individual downloads.",
     export_saved_to_folder: "File saved to the selected folder.",
     export_native_fallback: "This browser cannot save directly to a chosen folder. Falling back to download.",
 

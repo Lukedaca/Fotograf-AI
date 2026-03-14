@@ -25,7 +25,16 @@ import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AI
 import * as geminiService from '../services/geminiService';
 import { applyEditsAndExport } from '../utils/imageProcessor';
 import { getImageDimensionsFromBlob, saveAIGalleryAsset } from '../utils/aiGallery';
-import { buildEditedFileName, downloadBlob, saveBlobWithPicker, supportsNativeSavePicker, type SupportedExportFormat } from '../utils/fileSave';
+import {
+    buildEditedFileName,
+    downloadBlob,
+    pickDirectoryForSave,
+    saveBlobToDirectory,
+    saveBlobWithPicker,
+    supportsNativeDirectoryPicker,
+    supportsNativeSavePicker,
+    type SupportedExportFormat
+} from '../utils/fileSave';
 import { useTranslation } from '../contexts/LanguageContext';
 import { updateUserTendencies } from '../services/userProfileService';
 
@@ -114,6 +123,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
   const canUseNativeSave = supportsNativeSavePicker();
+  const canUseNativeBatchSave = supportsNativeDirectoryPicker();
 
 
   useEffect(() => {
@@ -158,7 +168,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     setQualityAssessment(activeFile.assessment || null);
 
     const currentFileId = activeFile.id;
-    const currentUrl = activeFile.originalPreviewUrl;
+    const currentUrl = activeFile.previewUrl;
     let isCancelled = false;
 
     const apply = async () => {
@@ -185,7 +195,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         isCancelled = true;
         clearTimeout(t);
     };
-  }, [activeFile?.id, activeFile?.originalPreviewUrl, manualEdits, files, createTrackedUrl]);
+  }, [activeFile?.id, activeFile?.previewUrl, manualEdits, files, createTrackedUrl]);
 
   const handleBackgroundRemoval = async () => {
     if (!activeFile) return;
@@ -354,15 +364,19 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     }
   }, [activeFile, addNotification, onDeductCredits, onOpenApiKeyModal, trans.msg_error]);
 
+  const buildExportArtifactForFile = useCallback(async (file: UploadedFile, edits: ManualEdits) => {
+    const blob = await applyEditsAndExport(file.previewUrl, edits, exportOptions);
+    const fileName = buildEditedFileName(file.file.name, exportOptions.format);
+    return { blob, fileName };
+  }, [exportOptions]);
+
   const buildManualExportArtifact = useCallback(async () => {
     if (!activeFile) {
       throw new Error('NO_ACTIVE_FILE');
     }
 
-    const blob = await applyEditsAndExport(activeFile.originalPreviewUrl, manualEdits, exportOptions);
-    const fileName = buildEditedFileName(activeFile.file.name, exportOptions.format);
-    return { blob, fileName };
-  }, [activeFile, manualEdits, exportOptions]);
+    return buildExportArtifactForFile(activeFile, manualEdits);
+  }, [activeFile, buildExportArtifactForFile, manualEdits]);
 
   const handleManualExport = async () => {
     if (!activeFile) return;
@@ -413,6 +427,77 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         setLoadingMessage('');
     }
   };
+
+  const handleBatchExport = useCallback(async () => {
+    if (files.length === 0) return;
+
+    setIsLoading(true);
+    setLoadingMessage(trans.export_batch_processing);
+
+    try {
+        const directoryHandle = canUseNativeBatchSave ? await pickDirectoryForSave() : null;
+        const usedNames = new Map<string, number>();
+        let exportedCount = 0;
+
+        const getUniqueFileName = (fileName: string) => {
+            const seen = usedNames.get(fileName) || 0;
+            usedNames.set(fileName, seen + 1);
+            if (seen === 0) return fileName;
+            const dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex === -1) return `${fileName}_${seen + 1}`;
+            const base = fileName.slice(0, dotIndex);
+            const ext = fileName.slice(dotIndex);
+            return `${base}_${seen + 1}${ext}`;
+        };
+
+        for (let index = 0; index < files.length; index++) {
+            const file = files[index];
+            const fileEdits = file.id === activeFileId ? manualEdits : INITIAL_EDITS;
+
+            setLoadingMessage(`${trans.export_batch_processing} ${index + 1}/${files.length}`);
+            const artifact = await buildExportArtifactForFile(file, fileEdits);
+            const fileName = getUniqueFileName(artifact.fileName);
+
+            if (directoryHandle) {
+                await saveBlobToDirectory(directoryHandle, artifact.blob, fileName);
+            } else {
+                downloadBlob(artifact.blob, fileName);
+            }
+            exportedCount += 1;
+        }
+
+        if (directoryHandle) {
+            addNotification(`${exportedCount} ${trans.export_batch_saved_to_folder}`, 'info');
+        } else {
+            addNotification(trans.export_batch_native_fallback, 'info');
+        }
+    } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+            return;
+        }
+
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
+        addNotification(trans.msg_error, 'error');
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+  }, [
+    activeFileId,
+    addNotification,
+    buildExportArtifactForFile,
+    canUseNativeBatchSave,
+    files,
+    manualEdits,
+    onOpenApiKeyModal,
+    trans.export_batch_native_fallback,
+    trans.export_batch_processing,
+    trans.export_batch_saved_to_folder,
+    trans.msg_error,
+  ]);
 
   const handleSnapshot = () => {
     updateUserTendencies({
@@ -1098,7 +1183,9 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                            exportOptions={exportOptions}
                            onExportOptionsChange={setExportOptions}
                            onRequestExport={handleManualExport}
+                           onRequestBatchExport={handleBatchExport}
                            onRequestSaveAs={handleManualSaveAs}
+                           canBatchExport={files.length > 1}
                            canUseNativeSave={canUseNativeSave}
                            onStartManualCrop={() => {}}
                            onSnapshot={handleSnapshot}

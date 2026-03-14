@@ -24,6 +24,19 @@ type SaveFilePicker = (options?: {
   }>;
 }>;
 
+export type NativeDirectoryHandle = {
+  getFileHandle: (name: string, options?: { create?: boolean }) => Promise<{
+    createWritable: () => Promise<{
+      write: (data: Blob) => Promise<void>;
+      close: () => Promise<void>;
+    }>;
+  }>;
+};
+
+type DirectoryPicker = (options?: {
+  mode?: 'read' | 'readwrite';
+}) => Promise<NativeDirectoryHandle>;
+
 const getSaveFilePicker = (): SaveFilePicker | null => {
   if (typeof window === 'undefined') return null;
 
@@ -34,7 +47,18 @@ const getSaveFilePicker = (): SaveFilePicker | null => {
   return pickerWindow.showSaveFilePicker ?? null;
 };
 
+const getDirectoryPicker = (): DirectoryPicker | null => {
+  if (typeof window === 'undefined') return null;
+
+  const pickerWindow = window as Window & {
+    showDirectoryPicker?: DirectoryPicker;
+  };
+
+  return pickerWindow.showDirectoryPicker ?? null;
+};
+
 export const supportsNativeSavePicker = (): boolean => getSaveFilePicker() !== null;
+export const supportsNativeDirectoryPicker = (): boolean => getDirectoryPicker() !== null;
 
 export const buildEditedFileName = (originalName: string, format: SupportedExportFormat): string => {
   const baseName = originalName.replace(/\.[^/.]+$/, '');
@@ -75,6 +99,26 @@ export const saveBlobWithPicker = async (
   });
 
   const writable = await handle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+};
+
+export const pickDirectoryForSave = async (): Promise<NativeDirectoryHandle> => {
+  const directoryPicker = getDirectoryPicker();
+  if (!directoryPicker) {
+    throw new Error('DIRECTORY_PICKER_UNSUPPORTED');
+  }
+
+  return directoryPicker({ mode: 'readwrite' });
+};
+
+export const saveBlobToDirectory = async (
+  directoryHandle: NativeDirectoryHandle,
+  blob: Blob,
+  fileName: string
+) => {
+  const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
   await writable.write(blob);
   await writable.close();
 };
