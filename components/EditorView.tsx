@@ -146,6 +146,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
       };
   }, []);
 
+  // Exit retouch mode when navigating to another action
+  useEffect(() => {
+    if (activeAction?.action && activeAction.action !== 'retouch') {
+      setIsRetouchMode(false);
+    }
+  }, [activeAction]);
+
   useEffect(() => {
       return () => {
           if (editedPreviewUrl && editedPreviewUrl.startsWith('blob:')) {
