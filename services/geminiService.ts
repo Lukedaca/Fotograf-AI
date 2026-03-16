@@ -47,12 +47,10 @@ async function withRetry<T>(
             // Always retry RETRYABLE errors (e.g. model returned text instead of image)
             const isRetryable = errorMessage.startsWith('RETRYABLE:');
 
-            // Don't retry permanent failures
+            // Don't retry only truly permanent failures (bad API key, invalid JSON)
             if (!isRetryable && (
                 lowerMessage.includes('invalid api key') ||
-                lowerMessage.includes('blocked') ||
-                lowerMessage.includes('invalid json') ||
-                lowerMessage.includes('safety')
+                lowerMessage.includes('invalid json')
             )) {
                 throw lastError;
             }
@@ -82,13 +80,9 @@ function getInlineImageData(response: any) {
 
     const candidate = response.candidates[0];
 
-    // Safety filter check
-    if (candidate.finishReason === 'SAFETY') {
-        throw new Error('AI blocked: content filtered by safety policy');
-    }
-
-    if (!candidate.content || !candidate.content.parts) {
-        throw new Error('RETRYABLE: AI response has no content - unexpected format');
+    // Any non-image response is retryable — never give up
+    if (candidate.finishReason === 'SAFETY' || !candidate.content || !candidate.content.parts) {
+        throw new Error('RETRYABLE: AI response has no content - retrying');
     }
 
     // Search all parts for image data
@@ -402,7 +396,7 @@ export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ f
         });
         const imagePart = getInlineImageData(response);
         return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
-    }, 4);
+    }, 5);
 };
 
 export const retouchWithMask = async (file: File, maskBase64: string): Promise<{ file: File }> => {
@@ -424,5 +418,5 @@ export const retouchWithMask = async (file: File, maskBase64: string): Promise<{
         });
         const imagePart = getInlineImageData(response);
         return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
-    }, 4);
+    }, 5);
 };
