@@ -103,6 +103,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [retouchHasMask, setRetouchHasMask] = useState(false);
   const [retouchProcessing, setRetouchProcessing] = useState(false);
   const [retouchPromptHistory, setRetouchPromptHistory] = useState<string[]>([]);
+  const [retouchBatchProgress, setRetouchBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const [isRetouchMode, setIsRetouchMode] = useState(false);
   const canvasViewportRef = useRef<CanvasViewportHandle>(null);
   const lastAutoCropAtRef = useRef<number | null>(null);
@@ -308,28 +309,73 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   };
 
   // --- Retouch handlers ---
-  const handleRetouchPrompt = async (prompt: string) => {
+  const handleRetouchPrompt = async (prompt: string, batch: boolean) => {
     if (!activeFile) return;
-    const COST = 3;
-    if (!await onDeductCredits(COST)) return;
 
-    setRetouchProcessing(true);
-    setIsLoading(true);
-    setLoadingMessage(language === 'cs' ? 'AI retušuje...' : 'AI retouching...');
-    try {
-      const result = await geminiService.retouchWithPrompt(activeFile.file, prompt);
-      const newUrl = URL.createObjectURL(result.file);
-      setEditedPreviewUrl(newUrl);
-      onSetFiles((prev) => prev.map(f =>
-        f.id === activeFile.id ? { ...f, file: result.file, previewUrl: newUrl } : f
-      ), `Retouch: ${prompt}`);
+    if (batch && files.length > 1) {
+      // Batch retouch all files
+      const totalCost = 3 * files.length;
+      if (!await onDeductCredits(totalCost)) return;
+
+      setRetouchProcessing(true);
+      setIsLoading(true);
+      setRetouchBatchProgress({ current: 0, total: files.length });
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setRetouchBatchProgress({ current: i + 1, total: files.length });
+        setLoadingMessage(language === 'cs'
+          ? `AI retušuje ${i + 1}/${files.length}...`
+          : `AI retouching ${i + 1}/${files.length}...`);
+        try {
+          const result = await geminiService.retouchWithPrompt(file.file, prompt);
+          const newUrl = URL.createObjectURL(result.file);
+          onSetFiles((prev) => prev.map(f =>
+            f.id === file.id ? { ...f, file: result.file, previewUrl: newUrl } : f
+          ), `Batch retouch ${i + 1}/${files.length}: ${prompt}`);
+          if (file.id === activeFileId) {
+            setEditedPreviewUrl(newUrl);
+          }
+          successCount++;
+        } catch {
+          failCount++;
+        }
+      }
+
       setRetouchPromptHistory(prev => [prompt, ...prev.filter(p => p !== prompt)].slice(0, 10));
-      addNotification(language === 'cs' ? 'Retuš dokončena' : 'Retouch complete', 'info');
-    } catch (e: any) {
-      addNotification(`Retouch error: ${e.message}`, 'error');
-    } finally {
+      const msg = language === 'cs'
+        ? `Hromadná retuš: ${successCount} OK${failCount > 0 ? `, ${failCount} chyb` : ''}`
+        : `Batch retouch: ${successCount} OK${failCount > 0 ? `, ${failCount} failed` : ''}`;
+      addNotification(msg, failCount > 0 ? 'error' : 'info');
       setRetouchProcessing(false);
       setIsLoading(false);
+      setRetouchBatchProgress(null);
+    } else {
+      // Single file retouch
+      const COST = 3;
+      if (!await onDeductCredits(COST)) return;
+
+      setRetouchProcessing(true);
+      setIsLoading(true);
+      setLoadingMessage(language === 'cs' ? 'AI retušuje...' : 'AI retouching...');
+      try {
+        const result = await geminiService.retouchWithPrompt(activeFile.file, prompt);
+        const newUrl = URL.createObjectURL(result.file);
+        setEditedPreviewUrl(newUrl);
+        onSetFiles((prev) => prev.map(f =>
+          f.id === activeFile.id ? { ...f, file: result.file, previewUrl: newUrl } : f
+        ), `Retouch: ${prompt}`);
+        setRetouchPromptHistory(prev => [prompt, ...prev.filter(p => p !== prompt)].slice(0, 10));
+        addNotification(language === 'cs' ? 'Retuš dokončena' : 'Retouch complete', 'info');
+      } catch (e: any) {
+        addNotification(`Retouch error: ${e.message}`, 'error');
+      } finally {
+        setRetouchProcessing(false);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -1084,6 +1130,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                       onSubmit={handleRetouchPrompt}
                       isProcessing={retouchProcessing}
                       lastPrompts={retouchPromptHistory}
+                      fileCount={files.length}
+                      batchProgress={retouchBatchProgress}
                     />
                   </div>
                 )}

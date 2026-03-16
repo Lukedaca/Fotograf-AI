@@ -3,13 +3,16 @@ import { SparklesIcon } from '../icons';
 import { useTranslation } from '../../contexts/LanguageContext';
 
 interface RetouchPromptProps {
-  onSubmit: (prompt: string) => void;
+  onSubmit: (prompt: string, batch: boolean) => void;
   isProcessing: boolean;
   lastPrompts?: string[];
+  fileCount: number;
+  batchProgress?: { current: number; total: number } | null;
 }
 
-const RetouchPrompt: React.FC<RetouchPromptProps> = ({ onSubmit, isProcessing, lastPrompts = [] }) => {
+const RetouchPrompt: React.FC<RetouchPromptProps> = ({ onSubmit, isProcessing, lastPrompts = [], fileCount, batchProgress }) => {
   const [prompt, setPrompt] = useState('');
+  const [batchMode, setBatchMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { language } = useTranslation();
@@ -18,7 +21,7 @@ const RetouchPrompt: React.FC<RetouchPromptProps> = ({ onSubmit, isProcessing, l
   const handleSubmit = () => {
     const trimmed = prompt.trim();
     if (!trimmed || isProcessing) return;
-    onSubmit(trimmed);
+    onSubmit(trimmed, batchMode);
     setPrompt('');
   };
 
@@ -38,9 +41,26 @@ const RetouchPrompt: React.FC<RetouchPromptProps> = ({ onSubmit, isProcessing, l
     }
   }, [prompt]);
 
-  const placeholderText = isCz
-    ? 'Napiš co chceš retušovat... (např. odstraň vrásky, vyhlaď pleť, odstraň objekt vlevo)'
-    : 'Describe what to retouch... (e.g. remove wrinkles, smooth skin, remove object on left)';
+  const placeholderText = batchMode
+    ? (isCz
+      ? `Retuš na všech ${fileCount} snímcích... (např. odeber tetování, vyhlaď pleť)`
+      : `Retouch all ${fileCount} images... (e.g. remove tattoos, smooth skin)`)
+    : (isCz
+      ? 'Napiš co chceš retušovat... (např. odstraň vrásky, vyhlaď pleť, odstraň objekt vlevo)'
+      : 'Describe what to retouch... (e.g. remove wrinkles, smooth skin, remove object on left)');
+
+  const buttonLabel = () => {
+    if (isProcessing && batchProgress) {
+      return `${batchProgress.current}/${batchProgress.total}`;
+    }
+    if (isProcessing) {
+      return isCz ? 'AI pracuje...' : 'Processing...';
+    }
+    if (batchMode) {
+      return isCz ? `Všechny (${fileCount})` : `All (${fileCount})`;
+    }
+    return isCz ? 'Odeslat' : 'Send';
+  };
 
   return (
     <div className="relative">
@@ -58,12 +78,31 @@ const RetouchPrompt: React.FC<RetouchPromptProps> = ({ onSubmit, isProcessing, l
           disabled={isProcessing}
           className="flex-1 bg-transparent text-text-primary text-sm placeholder:text-text-secondary/50 resize-none outline-none min-h-[24px] max-h-[80px] disabled:opacity-50"
         />
+
+        {/* Batch toggle */}
+        {fileCount > 1 && (
+          <button
+            onClick={() => setBatchMode(!batchMode)}
+            disabled={isProcessing}
+            title={isCz ? 'Hromadná retuš na všech snímcích' : 'Batch retouch all images'}
+            className={`flex-shrink-0 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all border disabled:opacity-50 ${
+              batchMode
+                ? 'bg-accent/20 text-accent border-accent/40'
+                : 'bg-elevated text-text-secondary border-border-subtle hover:text-text-primary hover:border-accent'
+            }`}
+          >
+            {isCz ? 'Vše' : 'All'}
+          </button>
+        )}
+
         <button
           onClick={handleSubmit}
           disabled={!prompt.trim() || isProcessing}
-          className="flex-shrink-0 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all disabled:opacity-30 bg-accent text-void hover:bg-accent/80"
+          className={`flex-shrink-0 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all disabled:opacity-30 ${
+            batchMode ? 'bg-orange-500 text-white hover:bg-orange-400' : 'bg-accent text-void hover:bg-accent/80'
+          }`}
         >
-          {isProcessing ? (isCz ? 'AI pracuje...' : 'Processing...') : (isCz ? 'Odeslat' : 'Send')}
+          {buttonLabel()}
         </button>
       </div>
 
