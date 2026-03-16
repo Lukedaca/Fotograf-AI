@@ -41,12 +41,19 @@ async function withRetry<T>(
             return await fn();
         } catch (error) {
             lastError = error as Error;
-            const errorMessage = lastError.message.toLowerCase();
-            if (
-                errorMessage.includes('invalid api key') ||
-                errorMessage.includes('blocked') ||
-                errorMessage.includes('invalid json')
-            ) {
+            const errorMessage = lastError.message;
+            const lowerMessage = errorMessage.toLowerCase();
+
+            // Always retry RETRYABLE errors (e.g. model returned text instead of image)
+            const isRetryable = errorMessage.startsWith('RETRYABLE:');
+
+            // Don't retry permanent failures
+            if (!isRetryable && (
+                lowerMessage.includes('invalid api key') ||
+                lowerMessage.includes('blocked') ||
+                lowerMessage.includes('invalid json') ||
+                lowerMessage.includes('safety')
+            )) {
                 throw lastError;
             }
 
@@ -74,17 +81,28 @@ function getInlineImageData(response: any) {
     }
 
     const candidate = response.candidates[0];
+
+    // Safety filter check
+    if (candidate.finishReason === 'SAFETY') {
+        throw new Error('AI blocked: content filtered by safety policy');
+    }
+
     if (!candidate.content || !candidate.content.parts) {
-        throw new Error('AI response has no content - unexpected format');
+        throw new Error('RETRYABLE: AI response has no content - unexpected format');
     }
 
-    const imagePart = candidate.content.parts.find((part: any) => part.inlineData);
+    // Search all parts for image data
+    const imagePart = candidate.content.parts.find((part: any) =>
+        part.inlineData?.data
+    );
     if (!imagePart) {
-        throw new Error('AI did not generate image data - try again or use different settings');
-    }
-
-    if (!imagePart.inlineData || !imagePart.inlineData.data) {
-        throw new Error('AI image data is empty - generation may have failed');
+        // Log what we got for debugging
+        const textParts = candidate.content.parts
+            .filter((p: any) => p.text)
+            .map((p: any) => p.text)
+            .join(' ');
+        console.warn('AI returned text instead of image:', textParts.slice(0, 200));
+        throw new Error('RETRYABLE: AI did not generate image - returned text instead');
     }
 
     return imagePart.inlineData;
@@ -375,13 +393,16 @@ export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ f
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: `Retušuj fotografii podle instrukce: ${prompt}. Zachovej celkový styl, kompozici a rozlišení. Proveď POUZE požadovanou úpravu, nic navíc.` }
+                    { text: `Edit this photo: ${prompt}. Return ONLY the edited image. Keep the same style, composition and resolution. Apply ONLY the requested edit, nothing else.` }
                 ]
+            },
+            config: {
+                responseModalities: ['image', 'text'],
             }
         });
         const imagePart = getInlineImageData(response);
         return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
-    });
+    }, 4);
 };
 
 export const retouchWithMask = async (file: File, maskBase64: string): Promise<{ file: File }> => {
@@ -394,11 +415,14 @@ export const retouchWithMask = async (file: File, maskBase64: string): Promise<{
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
                     { inlineData: { data: maskBase64, mimeType: 'image/png' } },
-                    { text: 'Druhý obrázek je maska. Bílé oblasti označují místa k retušování. Odstraň nebo oprav obsah v bílých oblastech masky pomocí inteligentního vyplnění (inpainting). Zachovej okolní texturu a osvětlení. Výsledek musí vypadat přirozeně.' }
+                    { text: 'The second image is a mask. White areas mark regions to retouch. Remove or fix content in white mask areas using intelligent inpainting. Match surrounding texture and lighting. Result must look natural. Return ONLY the edited image.' }
                 ]
+            },
+            config: {
+                responseModalities: ['image', 'text'],
             }
         });
         const imagePart = getInlineImageData(response);
         return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
-    });
+    }, 4);
 };
