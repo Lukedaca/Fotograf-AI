@@ -134,6 +134,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
 
   const activeFile = useMemo(() => files.find(f => f.id === activeFileId), [files, activeFileId]);
   const isYouTubeMode = activeAction?.action === 'youtube-thumbnail';
+  const isExportMode = activeAction?.action === 'export';
   const canUseNativeSave = supportsNativeSavePicker();
   const canUseNativeBatchSave = supportsNativeDirectoryPicker();
 
@@ -1002,8 +1003,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                 setRadialMenu({ x: e.clientX, y: e.clientY });
               }}
             >
-                {/* Retouch toolbar + mode toggle */}
-                {!isYouTubeMode && activeFile && (
+                {/* Retouch toolbar + mode toggle — hidden in export mode */}
+                {!isYouTubeMode && !isExportMode && activeFile && (
                   <div className="flex items-center gap-2 px-4 py-2 border-b border-border-subtle bg-surface/80 backdrop-blur-sm z-20">
                     <button
                       onClick={() => setIsRetouchMode(!isRetouchMode)}
@@ -1123,8 +1124,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                   )}
                 </div>
 
-                {/* Retouch prompt bar */}
-                {isRetouchMode && activeFile && (
+                {/* Retouch prompt bar — hidden in export mode */}
+                {isRetouchMode && !isExportMode && activeFile && (
                   <div className="px-4 py-2 border-t border-border-subtle bg-surface/80 backdrop-blur-sm">
                     <RetouchPrompt
                       onSubmit={handleRetouchPrompt}
