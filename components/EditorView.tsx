@@ -3,14 +3,17 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Header from './Header';
 import FloatingDock from './editor/FloatingDock';
 import RadialMenu from './editor/RadialMenu';
+import CanvasViewport, { type RetouchTool, type CanvasViewportHandle } from './editor/CanvasViewport';
+import RetouchToolbar from './editor/RetouchToolbar';
+import RetouchPrompt from './editor/RetouchPrompt';
 import CinematicLoader from './common/CinematicLoader';
 import ManualEditControls from './ManualEditControls';
 import Histogram from './Histogram';
 import CompareSlider from './CompareSlider';
-import { 
-    UndoIcon, 
-    UploadIcon, 
-    AutopilotIcon, 
+import {
+    UndoIcon,
+    UploadIcon,
+    AutopilotIcon,
     SparklesIcon,
     YoutubeIcon,
     MicrophoneIcon,
@@ -95,6 +98,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const [autoCropImageSize, setAutoCropImageSize] = useState<{ width: number; height: number } | null>(null);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [radialMenu, setRadialMenu] = useState<{ x: number; y: number } | null>(null);
+  const [retouchTool, setRetouchTool] = useState<RetouchTool>('none');
+  const [retouchBrushSize, setRetouchBrushSize] = useState(40);
+  const [retouchHasMask, setRetouchHasMask] = useState(false);
+  const [retouchProcessing, setRetouchProcessing] = useState(false);
+  const [retouchPromptHistory, setRetouchPromptHistory] = useState<string[]>([]);
+  const [isRetouchMode, setIsRetouchMode] = useState(false);
+  const canvasViewportRef = useRef<CanvasViewportHandle>(null);
   const lastAutoCropAtRef = useRef<number | null>(null);
   const cropRef = useRef<HTMLDivElement>(null);
   const lightRef = useRef<HTMLDivElement>(null);
@@ -287,6 +297,63 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         addNotification(trans.msg_error, 'error');
     } finally {
         setIsLoading(false);
+    }
+  };
+
+  // --- Retouch handlers ---
+  const handleRetouchPrompt = async (prompt: string) => {
+    if (!activeFile) return;
+    const COST = 3;
+    if (!await onDeductCredits(COST)) return;
+
+    setRetouchProcessing(true);
+    setIsLoading(true);
+    setLoadingMessage(language === 'cs' ? 'AI retušuje...' : 'AI retouching...');
+    try {
+      const result = await geminiService.retouchWithPrompt(activeFile.file, prompt);
+      const newUrl = URL.createObjectURL(result.file);
+      setEditedPreviewUrl(newUrl);
+      onSetFiles((prev) => prev.map(f =>
+        f.id === activeFile.id ? { ...f, file: result.file, previewUrl: newUrl } : f
+      ), `Retouch: ${prompt}`);
+      setRetouchPromptHistory(prev => [prompt, ...prev.filter(p => p !== prompt)].slice(0, 10));
+      addNotification(language === 'cs' ? 'Retuš dokončena' : 'Retouch complete', 'info');
+    } catch (e: any) {
+      addNotification(`Retouch error: ${e.message}`, 'error');
+    } finally {
+      setRetouchProcessing(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetouchMask = async () => {
+    if (!activeFile || !canvasViewportRef.current) return;
+    const maskDataUrl = canvasViewportRef.current.getMaskDataUrl();
+    if (!maskDataUrl) return;
+
+    const COST = 3;
+    if (!await onDeductCredits(COST)) return;
+
+    setRetouchProcessing(true);
+    setIsLoading(true);
+    setLoadingMessage(language === 'cs' ? 'AI retušuje vybranou oblast...' : 'AI retouching selected area...');
+    try {
+      // Extract base64 from data URL
+      const maskBase64 = maskDataUrl.split(',')[1];
+      const result = await geminiService.retouchWithMask(activeFile.file, maskBase64);
+      const newUrl = URL.createObjectURL(result.file);
+      setEditedPreviewUrl(newUrl);
+      onSetFiles((prev) => prev.map(f =>
+        f.id === activeFile.id ? { ...f, file: result.file, previewUrl: newUrl } : f
+      ), 'Retouch (mask selection)');
+      canvasViewportRef.current.clearMask();
+      setRetouchHasMask(false);
+      addNotification(language === 'cs' ? 'Retuš dokončena' : 'Retouch complete', 'info');
+    } catch (e: any) {
+      addNotification(`Retouch error: ${e.message}`, 'error');
+    } finally {
+      setRetouchProcessing(false);
+      setIsLoading(false);
     }
   };
 
@@ -683,16 +750,16 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
       suggestions.push(trans.suggestion_raise_shadows);
     }
     if (manualEdits.saturation > 35 && manualEdits.vibrance < 10) {
-      suggestions.push(trans.suggestion_increase_vibrance);
+      suggestions.push(trans.suggestion_raise_vibrance);
     }
     if (manualEdits.sharpness > 60 && manualEdits.noiseReduction < 10) {
       suggestions.push(trans.suggestion_add_noise_reduction);
     }
     if (manualEdits.contrast < -20) {
-      suggestions.push(trans.suggestion_increase_contrast);
+      suggestions.push(trans.suggestion_raise_contrast);
     }
     if (manualEdits.cropRect && !manualEdits.aspectRatio) {
-      suggestions.push(trans.suggestion_export_aspect);
+      suggestions.push(trans.suggestion_crop_tip);
     }
     setLiveSuggestions(suggestions.slice(0, 3));
   }, [manualEdits, trans]);
@@ -837,7 +904,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
               <AutopilotIcon className="w-3.5 h-3.5" />
               {trans.editor_basic_edit}
             </button>
-            <button onClick={() => onNavigate({ view: 'editor', action: 'retouch' })} className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10 transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm">
+            <button onClick={() => setIsRetouchMode(true)} className={`flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-full border transition-all text-[11px] font-bold uppercase tracking-widest shadow-sm ${isRetouchMode ? 'border-accent bg-accent/20 text-accent' : 'border-border-subtle bg-elevated text-text-secondary hover:text-text-primary hover:border-accent hover:bg-accent/10'}`}>
               <EraserIcon className="w-3.5 h-3.5" />
               {trans.editor_retouch}
             </button>
@@ -875,75 +942,86 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             {/* Viewport */}
             <div
-              className="flex-1 bg-surface/60 relative overflow-hidden flex items-center justify-center p-6"
+              className="flex-1 bg-surface/60 relative overflow-hidden flex flex-col"
               onContextMenu={(e) => {
                 e.preventDefault();
                 if (isYouTubeMode || !activeFile) return;
                 setRadialMenu({ x: e.clientX, y: e.clientY });
               }}
             >
-                <div className="w-full max-w-5xl h-full relative flex items-center justify-center">
-                    
-                    {!isYouTubeMode && activeFile && (
-                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`absolute top-4 left-4 z-50 p-3 rounded-full border border-border-subtle transition-all shadow-lg ${isVoiceActive ? 'bg-accent text-void' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
-                            <MicrophoneIcon className="w-6 h-6" />
-                        </button>
+                {/* Retouch toolbar + mode toggle */}
+                {!isYouTubeMode && activeFile && (
+                  <div className="flex items-center gap-2 px-4 py-2 border-b border-border-subtle bg-surface/80 backdrop-blur-sm z-20">
+                    <button
+                      onClick={() => setIsRetouchMode(!isRetouchMode)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                        isRetouchMode
+                          ? 'bg-accent/20 text-accent border-accent/40'
+                          : 'bg-elevated text-text-secondary border-border-subtle hover:text-text-primary hover:border-accent'
+                      }`}
+                    >
+                      <EraserIcon className="w-3.5 h-3.5" />
+                      {language === 'cs' ? 'Retuš' : 'Retouch'}
+                    </button>
+
+                    {isRetouchMode && (
+                      <RetouchToolbar
+                        activeTool={retouchTool}
+                        onToolChange={setRetouchTool}
+                        brushSize={retouchBrushSize}
+                        onBrushSizeChange={setRetouchBrushSize}
+                        onClearMask={() => {
+                          canvasViewportRef.current?.clearMask();
+                          setRetouchHasMask(false);
+                        }}
+                        onApplyMask={handleRetouchMask}
+                        hasMask={retouchHasMask}
+                        isProcessing={retouchProcessing}
+                      />
                     )}
 
-                    {activeFile ? (
-                        <div
-                          className="relative group border border-border-subtle overflow-hidden max-h-full max-w-full rounded-2xl shadow-2xl"
-                          onDoubleClick={() => setIsFocusMode((prev) => !prev)}
-                        >
-                           {isComparing ? (
-                               <CompareSlider beforeUrl={activeFile.originalPreviewUrl} afterUrl={editedPreviewUrl || activeFile.previewUrl} />
-                           ) : (
-                               <>
-                                <div className="relative inline-block">
-                                  <img src={editedPreviewUrl || activeFile.previewUrl} alt={trans.editor_preview} className="block max-h-full max-w-full object-contain select-none" />
-                                  {autoCropSuggestions.length > 0 && autoCropImageSize && (
-                                    <div className="absolute inset-0 pointer-events-none">
-                                      {autoCropSuggestions.slice(0, 3).map((item, idx) => {
-                                        const left = (item.rect.x / autoCropImageSize.width) * 100;
-                                        const top = (item.rect.y / autoCropImageSize.height) * 100;
-                                        const width = (item.rect.width / autoCropImageSize.width) * 100;
-                                        const height = (item.rect.height / autoCropImageSize.height) * 100;
-                                        const isActive = idx === autoCropSelectedIndex;
-                                        return (
-                                          <motion.div
-                                            key={`${item.aspectRatio}-${idx}`}
-                                            initial={{ opacity: 0, scale: 0.98 }}
-                                            animate={{ opacity: isActive ? 0.9 : 0.45, scale: 1 }}
-                                            transition={{ duration: 0.2 }}
-                                            className={`absolute border-2 rounded-lg ${isActive ? 'border-accent' : 'border-border-subtle'}`}
-                                            style={{ left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%` }}
-                                          >
-                                            <div className="absolute -top-4 left-0 text-[10px] font-bold text-text-secondary bg-void border border-border-subtle px-2 py-0.5 rounded-full">
-                                              {idx + 1}
-                                            </div>
-                                          </motion.div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                                <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="absolute bottom-4 right-4 bg-surface/80 backdrop-blur-md text-text-primary px-4 py-2 text-xs font-bold border border-border-subtle rounded-full shadow-lg z-20 hover:bg-elevated">
-                                    {trans.compare_btn}
-                                </button>
-                               </>
-                           )}
-                        </div>
-                    ) : isYouTubeMode ? (
-                        <div className="w-full h-full border-2 border-dashed border-accent/40 rounded-3xl flex flex-col items-center justify-center bg-surface group">
-                            <div className="p-8 bg-elevated rounded-full mb-6">
-                                <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
-                            </div>
-                            <h2 className="text-2xl font-black text-text-secondary tracking-tighter uppercase">Studio miniatur</h2>
-                        </div>
-                    ) : null}
-                </div>
+                    {!isRetouchMode && (
+                      <>
+                        <button onClick={() => setIsVoiceActive(!isVoiceActive)} className={`p-2 rounded-lg border border-border-subtle transition-all ${isVoiceActive ? 'bg-accent text-void' : 'bg-elevated text-text-secondary hover:text-text-primary'}`}>
+                          <MicrophoneIcon className="w-4 h-4" />
+                        </button>
+                        <button onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider bg-elevated text-text-secondary border border-border-subtle rounded-lg hover:text-text-primary hover:border-accent transition-all">
+                          {trans.compare_btn}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
 
-                {!isYouTubeMode && autoCropSuggestions.length > 0 && (
+                {/* Canvas viewport */}
+                <div className="flex-1 relative">
+                  {activeFile ? (
+                    isComparing ? (
+                      <div className="w-full h-full flex items-center justify-center p-6">
+                        <CompareSlider beforeUrl={activeFile.originalPreviewUrl} afterUrl={editedPreviewUrl || activeFile.previewUrl} />
+                      </div>
+                    ) : (
+                      <CanvasViewport
+                        ref={canvasViewportRef}
+                        imageSrc={editedPreviewUrl || activeFile.previewUrl}
+                        activeTool={isRetouchMode ? retouchTool : 'none'}
+                        brushSize={retouchBrushSize}
+                        onMaskReady={() => setRetouchHasMask(true)}
+                      />
+                    )
+                  ) : isYouTubeMode ? (
+                    <div className="w-full h-full flex items-center justify-center p-6">
+                      <div className="w-full h-full border-2 border-dashed border-accent/40 rounded-3xl flex flex-col items-center justify-center bg-surface group">
+                        <div className="p-8 bg-elevated rounded-full mb-6">
+                          <YoutubeIcon className="w-20 h-20 text-red-600 opacity-20" />
+                        </div>
+                        <h2 className="text-2xl font-black text-text-secondary tracking-tighter uppercase">Studio miniatur</h2>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Auto-crop overlay */}
+                  {!isYouTubeMode && autoCropSuggestions.length > 0 && (
                     <div className="absolute bottom-4 left-4 z-40 bg-surface/90 backdrop-blur border border-border-subtle p-4 rounded-2xl shadow-xl">
                         <div className="flex items-center justify-between gap-4 mb-3">
                             <div className="text-[10px] font-black uppercase tracking-widest text-accent">{trans.editor_ai_crop}</div>
@@ -983,14 +1061,25 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                         </div>
                         <div className="mt-2 text-[10px] text-text-secondary">{trans.editor_shortcuts}</div>
                     </div>
-                )}
-                
-                {isLoading && (
+                  )}
+
+                  {isLoading && (
                     <div className="absolute inset-0 bg-void/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
                         <CinematicLoader label={loadingMessage || 'Processing'} />
                     </div>
-                )}
+                  )}
+                </div>
 
+                {/* Retouch prompt bar */}
+                {isRetouchMode && activeFile && (
+                  <div className="px-4 py-2 border-t border-border-subtle bg-surface/80 backdrop-blur-sm">
+                    <RetouchPrompt
+                      onSubmit={handleRetouchPrompt}
+                      isProcessing={retouchProcessing}
+                      lastPrompts={retouchPromptHistory}
+                    />
+                  </div>
+                )}
             </div>
 
             {/* Controls Sidebar */}
@@ -1312,6 +1401,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
               onClose={() => setRadialMenu(null)}
               items={[
                 { id: 'autopilot', label: 'Autopilot', onClick: handleAutopilot },
+                { id: 'retouch', label: trans.editor_retouch, onClick: () => setIsRetouchMode(true) },
                 { id: 'auto-crop', label: trans.editor_auto_crop, onClick: handleAutoCrop },
                 { id: 'select-subject', label: trans.editor_select_subject, onClick: handleSmartSelect },
                 { id: 'remove-bg', label: trans.editor_remove_bg, onClick: handleBackgroundRemoval },

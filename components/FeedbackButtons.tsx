@@ -53,7 +53,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                                 ? 'opacity-20 grayscale'
                                 : 'hover:scale-105 opacity-80 hover:opacity-100'
                     }`}
-                    title={t.feedback_dislike_title}
+                    title={t.feedback_dislike}
                 >
                     <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'bad'
@@ -77,7 +77,7 @@ const FeedbackButtons: React.FC<FeedbackButtonsProps> = ({ onFeedback, onTimeout
                                 ? 'opacity-20 grayscale'
                                 : 'hover:scale-105 opacity-80 hover:opacity-100'
                     }`}
-                    title={t.feedback_like_title}
+                    title={t.feedback_like}
                 >
                     <div className={`p-4 border-2 transition-none ${
                          feedbackGiven === 'good'

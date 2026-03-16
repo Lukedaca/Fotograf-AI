@@ -139,7 +139,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="relative z-10 flex gap-4">
                     <div className="text-right hidden sm:block">
                         <p className="text-xs text-gray-400">{t.dash_plan_renewed}</p>
-                        <p className="text-sm font-bold text-white">1. března 2026</p>
+                        <p className="text-sm font-bold text-white">{t.dash_renewal_date}</p>
                     </div>
                     <button onClick={onBuyCredits} className="px-6 py-3 bg-white text-black font-bold rounded-xl text-xs hover:scale-105 transition-transform shadow-lg">
                         {t.dash_topup}

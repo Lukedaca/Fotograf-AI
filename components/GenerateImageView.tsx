@@ -199,7 +199,7 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
                                     {!isLoading && !generatedImage && (
                                         <div className="text-center text-text-secondary">
                                             <GenerateImageIcon className="mx-auto h-16 w-16 mb-4" />
-                                            <p className="text-lg">AI plátno</p>
+                                            <p className="text-lg">{t.gen_canvas}</p>
                                         </div>
                                     )}
                                 </div>
@@ -214,7 +214,7 @@ const GenerateImageView: React.FC<GenerateImageViewProps> = ({
                     onClick={() => setIsLightboxOpen(false)}
                     role="dialog"
                     aria-modal="true"
-                    aria-label="Náhled"
+                    aria-label={t.gen_preview_label}
                 >
                     <div className="relative max-w-5xl max-h-[90vh] transition-none" onClick={(e) => e.stopPropagation()}>
                         <img src={generatedImage} alt="Plný náhled" className="max-w-full max-h-[90vh] object-contain border border-border-subtle" />

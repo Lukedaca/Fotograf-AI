@@ -365,3 +365,40 @@ export const assessQuality = async (file: File): Promise<QualityAssessment> => {
         return safeJsonParse<QualityAssessment>(response.text, 'Quality assessment failed');
     });
 };
+
+export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ file: File }> => {
+    return withRetry(async () => {
+        const ai = getGenAI();
+        const base64Image = await fileToBase64(file);
+        const response = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: file.type } },
+                    { text: `Retušuj fotografii podle instrukce: ${prompt}. Zachovej celkový styl, kompozici a rozlišení. Proveď POUZE požadovanou úpravu, nic navíc.` }
+                ]
+            }
+        });
+        const imagePart = getInlineImageData(response);
+        return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
+    });
+};
+
+export const retouchWithMask = async (file: File, maskBase64: string): Promise<{ file: File }> => {
+    return withRetry(async () => {
+        const ai = getGenAI();
+        const base64Image = await fileToBase64(file);
+        const response = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: file.type } },
+                    { inlineData: { data: maskBase64, mimeType: 'image/png' } },
+                    { text: 'Druhý obrázek je maska. Bílé oblasti označují místa k retušování. Odstraň nebo oprav obsah v bílých oblastech masky pomocí inteligentního vyplnění (inpainting). Zachovej okolní texturu a osvětlení. Výsledek musí vypadat přirozeně.' }
+                ]
+            }
+        });
+        const imagePart = getInlineImageData(response);
+        return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
+    });
+};
