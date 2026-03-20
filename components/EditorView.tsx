@@ -905,6 +905,10 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
         addNotification(trans.msg_success, 'info');
     } catch (e) { 
         console.error('Thumbnail generation failed:', e);
+        const message = e instanceof Error ? e.message : '';
+        if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
+            onOpenApiKeyModal();
+        }
         addNotification(trans.msg_error, 'error'); 
     }
     finally { setIsLoading(false); }

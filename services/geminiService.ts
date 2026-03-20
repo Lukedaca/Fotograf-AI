@@ -5,6 +5,26 @@ import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
 import { sanitizeText } from '../utils/text';
 import { getApiKey } from '../utils/apiKey';
 
+const IMAGE_GENERATION_MODEL = 'gemini-2.5-flash-image';
+
+const THUMBNAIL_RESOLUTION_MAP = {
+    '1K': { width: 1280, height: 720 },
+    '2K': { width: 2048, height: 1152 },
+    '4K': { width: 3840, height: 2160 },
+} as const;
+
+const THUMBNAIL_MIME_MAP = {
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+} as const;
+
+const THUMBNAIL_EXTENSION_MAP = {
+    jpeg: 'jpg',
+    png: 'png',
+    webp: 'webp',
+} as const;
+
 function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
     if (!text) {
         throw new Error(`${fallbackError}: Empty response from AI`);
@@ -102,6 +122,63 @@ function getInlineImageData(response: any) {
     return imagePart.inlineData;
 }
 
+const loadImageFromFile = (file: File): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+
+        image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(image);
+        };
+
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Generated image could not be loaded'));
+        };
+
+        image.src = objectUrl;
+    });
+};
+
+const renderImageFile = async (
+    sourceFile: File,
+    baseName: string,
+    format: keyof typeof THUMBNAIL_MIME_MAP,
+    targetSize?: { width: number; height: number }
+): Promise<File> => {
+    const image = await loadImageFromFile(sourceFile);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        throw new Error('Canvas context unavailable');
+    }
+
+    canvas.width = targetSize?.width ?? image.naturalWidth;
+    canvas.height = targetSize?.height ?? image.naturalHeight;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const mimeType = THUMBNAIL_MIME_MAP[format];
+    const extension = THUMBNAIL_EXTENSION_MAP[format];
+    const quality = format === 'jpeg' || format === 'webp' ? 0.92 : undefined;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((result) => {
+            if (!result) {
+                reject(new Error('Failed to render generated thumbnail'));
+                return;
+            }
+
+            resolve(result);
+        }, mimeType, quality);
+    });
+
+    return new File([blob], `${baseName}.${extension}`, { type: blob.type || mimeType });
+};
+
 const clampRect = (rect: CropCoordinates, width: number, height: number): CropCoordinates => {
     const x = Math.max(0, Math.min(width, rect.x));
     const y = Math.max(0, Math.min(height, rect.y));
@@ -166,48 +243,54 @@ export const generateYouTubeThumbnail = async (
 ): Promise<{ file: File }> => {
     return withRetry(async () => {
         const ai = getGenAI();
-        
-        let prompt = `Vytvoř ultra-kvalitní virální YouTube miniaturu.
-        Téma: ${topic}.
-        POVINNÝ text: "${textOverlay}".
-        Kompozice: vysoký kontrast, syté barvy, filmové konturové světlo,
-        optimalizováno pro maximální CTR. Typografie musí být velká, výrazná a 3D.
-        Drž profesionální creator estetiku.`;
-
+        const requestedSize = THUMBNAIL_RESOLUTION_MAP[options.resolution];
+        const trimmedTopic = topic.trim();
+        const trimmedText = textOverlay.trim();
         const parts: any[] = [];
-        
+        const promptLines = [
+            'Create a polished, high-CTR YouTube thumbnail.',
+            `Topic: ${trimmedTopic}.`,
+            'Use a strong single focal point, bold contrast, saturated colors, and cinematic lighting.',
+            'Keep the composition clean and readable on both mobile and desktop.',
+            'Target exact 16:9 framing with a clear subject and strong visual hierarchy.',
+            'The result must look like a professional creator thumbnail, not a poster or generic artwork.',
+            'Avoid watermarks, platform logos, and unreadable or distorted text.',
+        ];
+
+        if (trimmedText) {
+            promptLines.push(`Required headline text: "${trimmedText}". Make it large, sharp, and readable.`);
+        } else {
+            promptLines.push('If text is used, keep it minimal, large, and perfectly readable.');
+        }
+
         if (options.referenceFile) {
             const base64Ref = await fileToBase64(options.referenceFile);
             parts.push({ inlineData: { data: base64Ref, mimeType: options.referenceFile.type } });
-            prompt += `\n\nPOUŽIJ PŘILOŽENÝ OBRÁZEK JAKO REFERENCI. Zachovej z něj hlavní subjekt, styl nebo kompozici, ale transformuj jej do virální YouTube estetiky.`;
+            promptLines.push('Use the attached image as a visual reference. Preserve the main subject or composition cues, but restyle it into a premium YouTube thumbnail.');
         }
-        
-        parts.push({ text: prompt });
+
+        parts.push({ text: promptLines.join(' ') });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-image-preview',
+            model: IMAGE_GENERATION_MODEL,
             contents: { parts },
-            config: { 
-                imageConfig: { 
-                    aspectRatio: "16:9", 
-                    imageSize: "LARGE" 
-                } 
-            }
         });
 
         const imagePart = getInlineImageData(response);
-    
-        let mimeType = 'image/jpeg';
-        let extension = 'jpg';
-        if (options.format === 'png') { mimeType = 'image/png'; extension = 'png'; }
-        else if (options.format === 'webp') { mimeType = 'image/webp'; extension = 'webp'; }
+        const generatedFile = await base64ToFile(
+            imagePart.data,
+            `yt_thumb_raw_${Date.now()}`,
+            imagePart.mimeType || 'image/png'
+        );
+        const finalFile = await renderImageFile(
+            generatedFile,
+            `yt_thumb_${Date.now()}`,
+            options.format,
+            requestedSize
+        );
 
         return { 
-            file: await base64ToFile(
-                imagePart.data, 
-                `yt_thumb_${Date.now()}.${extension}`, 
-                mimeType
-            ) 
+            file: finalFile,
         };
     });
 };
