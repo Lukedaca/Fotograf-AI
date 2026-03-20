@@ -5,7 +5,7 @@ import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
 import { sanitizeText } from '../utils/text';
 import { getApiKey } from '../utils/apiKey';
 
-const IMAGE_GENERATION_MODEL = 'gemini-2.5-flash-image';
+const IMAGE_GENERATION_MODEL = 'gemini-3.1-flash-image-preview';
 
 const THUMBNAIL_RESOLUTION_MAP = {
     '1K': { width: 1280, height: 720 },
@@ -24,6 +24,8 @@ const THUMBNAIL_EXTENSION_MAP = {
     png: 'png',
     webp: 'webp',
 } as const;
+
+const THUMBNAIL_FONT_FAMILY = 'Impact, "Arial Black", sans-serif';
 
 function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
     if (!text) {
@@ -141,11 +143,142 @@ const loadImageFromFile = (file: File): Promise<HTMLImageElement> => {
     });
 };
 
+const normalizeThumbnailHeadline = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+const wrapHeadlineText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
+    const words = normalizeThumbnailHeadline(text).split(' ').filter(Boolean);
+    if (words.length === 0) {
+        return [];
+    }
+
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+        const candidate = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(candidate).width <= maxWidth) {
+            currentLine = candidate;
+            continue;
+        }
+
+        if (!currentLine) {
+            let shortened = word;
+            while (shortened.length > 1 && ctx.measureText(`${shortened}…`).width > maxWidth) {
+                shortened = shortened.slice(0, -1);
+            }
+            lines.push(`${shortened}…`);
+            continue;
+        }
+
+        lines.push(currentLine);
+        currentLine = word;
+    }
+
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+
+    return lines;
+};
+
+const truncateHeadlineLine = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
+    if (ctx.measureText(text).width <= maxWidth) {
+        return text;
+    }
+
+    let trimmed = text;
+    while (trimmed.length > 1 && ctx.measureText(`${trimmed}…`).width > maxWidth) {
+        trimmed = trimmed.slice(0, -1);
+    }
+
+    return `${trimmed.trimEnd()}…`;
+};
+
+const layoutHeadlineText = (
+    ctx: CanvasRenderingContext2D,
+    headlineText: string,
+    canvasWidth: number,
+    canvasHeight: number
+) => {
+    const maxWidth = canvasWidth * 0.84;
+    const maxLines = 3;
+    const maxFontSize = Math.round(canvasHeight * 0.15);
+    const minFontSize = Math.max(42, Math.round(canvasHeight * 0.062));
+    const step = Math.max(4, Math.round(canvasHeight * 0.008));
+
+    for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= step) {
+        ctx.font = `900 ${fontSize}px ${THUMBNAIL_FONT_FAMILY}`;
+        const lines = wrapHeadlineText(ctx, headlineText, maxWidth);
+        if (lines.length > 0 && lines.length <= maxLines) {
+            return { fontSize, lines };
+        }
+    }
+
+    ctx.font = `900 ${minFontSize}px ${THUMBNAIL_FONT_FAMILY}`;
+    const lines = wrapHeadlineText(ctx, headlineText, maxWidth).slice(0, maxLines);
+    if (lines.length === maxLines) {
+        lines[maxLines - 1] = truncateHeadlineLine(ctx, lines[maxLines - 1], maxWidth);
+    }
+
+    return { fontSize: minFontSize, lines };
+};
+
+const drawThumbnailHeadline = (
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    canvasHeight: number,
+    headlineText: string
+) => {
+    const normalizedText = normalizeThumbnailHeadline(headlineText);
+    if (!normalizedText) {
+        return;
+    }
+
+    const { fontSize, lines } = layoutHeadlineText(ctx, normalizedText, canvasWidth, canvasHeight);
+    if (lines.length === 0) {
+        return;
+    }
+
+    const lineHeight = Math.round(fontSize * 0.9);
+    const panelHeight = Math.round(lines.length * lineHeight + canvasHeight * 0.12);
+    const topPadding = Math.round(canvasHeight * 0.045);
+    const centerX = canvasWidth / 2;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, panelHeight);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.78)');
+    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.36)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvasWidth, panelHeight);
+
+    ctx.font = `900 ${fontSize}px ${THUMBNAIL_FONT_FAMILY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(6, Math.round(fontSize * 0.14));
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = Math.round(fontSize * 0.22);
+    ctx.shadowOffsetY = Math.max(2, Math.round(fontSize * 0.08));
+
+    lines.forEach((line, index) => {
+        const y = topPadding + index * lineHeight;
+        ctx.strokeText(line, centerX, y);
+        ctx.fillText(line, centerX, y);
+    });
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+};
+
 const renderImageFile = async (
     sourceFile: File,
     baseName: string,
     format: keyof typeof THUMBNAIL_MIME_MAP,
-    targetSize?: { width: number; height: number }
+    targetSize?: { width: number; height: number },
+    headlineText?: string
 ): Promise<File> => {
     const image = await loadImageFromFile(sourceFile);
     const canvas = document.createElement('canvas');
@@ -160,6 +293,10 @@ const renderImageFile = async (
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    if (headlineText) {
+        drawThumbnailHeadline(ctx, canvas.width, canvas.height, headlineText);
+    }
 
     const mimeType = THUMBNAIL_MIME_MAP[format];
     const extension = THUMBNAIL_EXTENSION_MAP[format];
@@ -248,19 +385,17 @@ export const generateYouTubeThumbnail = async (
         const trimmedText = textOverlay.trim();
         const parts: any[] = [];
         const promptLines = [
-            'Create a polished, high-CTR YouTube thumbnail.',
+            'Create a polished, high-CTR YouTube thumbnail background image.',
             `Topic: ${trimmedTopic}.`,
-            'Use a strong single focal point, bold contrast, saturated colors, and cinematic lighting.',
-            'Keep the composition clean and readable on both mobile and desktop.',
-            'Target exact 16:9 framing with a clear subject and strong visual hierarchy.',
-            'The result must look like a professional creator thumbnail, not a poster or generic artwork.',
-            'Avoid watermarks, platform logos, and unreadable or distorted text.',
+            'Use one strong focal subject, dramatic lighting, bold contrast, saturated colors, cinematic depth, and premium creator aesthetics.',
+            'Keep the composition readable on both mobile and desktop with a clear subject and strong visual hierarchy.',
+            'Leave the upper portion compositionally clean so a headline can be overlaid later.',
+            'Do not render any text, letters, captions, subtitles, or logos into the image.',
+            'The output must look like a professional YouTube thumbnail visual, not a poster or generic concept art.',
         ];
 
         if (trimmedText) {
-            promptLines.push(`Required headline text: "${trimmedText}". Make it large, sharp, and readable.`);
-        } else {
-            promptLines.push('If text is used, keep it minimal, large, and perfectly readable.');
+            promptLines.push(`The planned headline concept is "${trimmedText}". Support that message visually with emotion, composition, and negative space, but do not draw the text itself.`);
         }
 
         if (options.referenceFile) {
@@ -274,6 +409,13 @@ export const generateYouTubeThumbnail = async (
         const response = await ai.models.generateContent({
             model: IMAGE_GENERATION_MODEL,
             contents: { parts },
+            config: {
+                responseModalities: ['TEXT', 'IMAGE'],
+                imageConfig: {
+                    aspectRatio: '16:9',
+                    imageSize: options.resolution,
+                },
+            },
         });
 
         const imagePart = getInlineImageData(response);
@@ -286,7 +428,8 @@ export const generateYouTubeThumbnail = async (
             generatedFile,
             `yt_thumb_${Date.now()}`,
             options.format,
-            requestedSize
+            requestedSize,
+            trimmedText
         );
 
         return { 

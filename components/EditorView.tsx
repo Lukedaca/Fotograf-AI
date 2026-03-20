@@ -1243,6 +1243,11 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_text}</label>
                                 <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
+                                <div className={`text-[10px] ml-1 ${thumbnailText.trim().length > 42 ? 'text-amber-400' : 'text-text-secondary'}`}>
+                                    {thumbnailText.trim().length > 42
+                                        ? 'Text je už dost dlouhý. Pro silnou miniaturu drž headline ideálně krátký, 2 až 6 slov.'
+                                        : 'Nejlepší fungují krátké, úderné headline. Ideálně pár slov, ne celá věta.'}
+                                </div>
                             </div>
 
                             <div className="space-y-3 p-1">
