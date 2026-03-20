@@ -24,7 +24,18 @@ import {
     BackgroundReplacementIcon,
     StyleTransferIcon // Assume this exists or use Sparkles
 } from './icons';
-import type { UploadedFile, EditorAction, History, Preset, ManualEdits, View, AIGalleryType, AutoCropSuggestion, QualityAssessment } from '../types';
+import type {
+    UploadedFile,
+    EditorAction,
+    History,
+    Preset,
+    ManualEdits,
+    View,
+    AIGalleryType,
+    AutoCropSuggestion,
+    QualityAssessment,
+    YouTubeThumbnailTemplate,
+} from '../types';
 import * as geminiService from '../services/geminiService';
 import { runAutopilot } from '../services/aiAutopilot';
 import { applyEditsAndExport } from '../utils/imageProcessor';
@@ -127,7 +138,8 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   // YouTube Thumbnail State
   const [thumbnailTopic, setThumbnailTopic] = useState('');
   const [thumbnailText, setThumbnailText] = useState('');
-  const [thumbnailResolution, setThumbnailResolution] = useState<'1K' | '2K' | '4K'>('1K');
+  const [thumbnailTemplate, setThumbnailTemplate] = useState<YouTubeThumbnailTemplate>('shock-face');
+  const [thumbnailResolution, setThumbnailResolution] = useState<'1K' | '2K' | '4K'>('2K');
   const [thumbnailFormat, setThumbnailFormat] = useState<'jpeg' | 'png' | 'webp'>('jpeg');
   const [thumbnailReferenceFile, setThumbnailReferenceFile] = useState<File | null>(null);
   const [thumbnailReferencePreview, setThumbnailReferencePreview] = useState<string | null>(null);
@@ -137,6 +149,14 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   const isExportMode = activeAction?.action === 'export';
   const canUseNativeSave = supportsNativeSavePicker();
   const canUseNativeBatchSave = supportsNativeDirectoryPicker();
+  const thumbnailTemplates: Array<{ id: YouTubeThumbnailTemplate; title: string; description: string }> = [
+      { id: 'shock-face', title: trans.tool_youtube_template_shock_face, description: trans.tool_youtube_template_shock_face_desc },
+      { id: 'authority-clean', title: trans.tool_youtube_template_authority_clean, description: trans.tool_youtube_template_authority_clean_desc },
+      { id: 'split-drama', title: trans.tool_youtube_template_split_drama, description: trans.tool_youtube_template_split_drama_desc },
+      { id: 'cinematic-poster', title: trans.tool_youtube_template_cinematic_poster, description: trans.tool_youtube_template_cinematic_poster_desc },
+  ];
+  const thumbnailResolutions: Array<'1K' | '2K' | '4K'> = ['1K', '2K', '4K'];
+  const thumbnailFormats: Array<'jpeg' | 'png' | 'webp'> = ['jpeg', 'png', 'webp'];
 
 
   useEffect(() => {
@@ -875,6 +895,7 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
     setLoadingMessage(trans.editor_generating_thumbnail);
     try {
         const { file } = await geminiService.generateYouTubeThumbnail(thumbnailTopic, thumbnailText, { 
+            template: thumbnailTemplate,
             resolution: thumbnailResolution, 
             format: thumbnailFormat,
             referenceFile: thumbnailReferenceFile || undefined
@@ -889,7 +910,8 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
                 id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
                 createdAt: new Date().toISOString(),
                 type: 'youtube-thumbnail' as AIGalleryType,
-                prompt: `Topic: ${thumbnailTopic}
+                prompt: `Template: ${thumbnailTemplate}
+Topic: ${thumbnailTopic}
 Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : ''}`,
                 projectId: currentProjectId || null,
                 fileName: file.name,
@@ -1245,15 +1267,77 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                 <input type="text" value={thumbnailText} onChange={(e) => setThumbnailText(e.target.value)} placeholder={trans.tool_youtube_text_ph} className="w-full bg-elevated border border-border-subtle rounded-xl p-4 text-sm text-text-primary outline-none placeholder:text-text-secondary" />
                                 <div className={`text-[10px] ml-1 ${thumbnailText.trim().length > 42 ? 'text-amber-400' : 'text-text-secondary'}`}>
                                     {thumbnailText.trim().length > 42
-                                        ? 'Text je už dost dlouhý. Pro silnou miniaturu drž headline ideálně krátký, 2 až 6 slov.'
-                                        : 'Nejlepší fungují krátké, úderné headline. Ideálně pár slov, ne celá věta.'}
+                                        ? trans.tool_youtube_text_hint_long
+                                        : trans.tool_youtube_text_hint}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_template}</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {thumbnailTemplates.map((template) => {
+                                        const isActive = thumbnailTemplate === template.id;
+                                        return (
+                                            <button
+                                                key={template.id}
+                                                onClick={() => setThumbnailTemplate(template.id)}
+                                                className={`text-left rounded-2xl border p-4 transition-all ${
+                                                    isActive
+                                                        ? 'border-accent bg-accent/10 shadow-[0_0_20px_rgba(99,102,241,0.18)]'
+                                                        : 'border-border-subtle bg-elevated hover:border-accent/40 hover:bg-surface'
+                                                }`}
+                                            >
+                                                <div className="text-[11px] font-black uppercase tracking-wider text-text-primary">{template.title}</div>
+                                                <div className="mt-2 text-[11px] leading-relaxed text-text-secondary">{template.description}</div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_quality}</label>
+                                    <div className="flex gap-2">
+                                        {thumbnailResolutions.map((resolution) => (
+                                            <button
+                                                key={resolution}
+                                                onClick={() => setThumbnailResolution(resolution)}
+                                                className={`flex-1 rounded-xl border px-3 py-3 text-[11px] font-black uppercase tracking-wider transition-all ${
+                                                    thumbnailResolution === resolution
+                                                        ? 'border-accent bg-accent text-void'
+                                                        : 'border-border-subtle bg-elevated text-text-secondary hover:border-accent/40 hover:text-text-primary'
+                                                }`}
+                                            >
+                                                {resolution}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">{trans.tool_youtube_format}</label>
+                                    <div className="flex gap-2">
+                                        {thumbnailFormats.map((format) => (
+                                            <button
+                                                key={format}
+                                                onClick={() => setThumbnailFormat(format)}
+                                                className={`flex-1 rounded-xl border px-3 py-3 text-[11px] font-black uppercase tracking-wider transition-all ${
+                                                    thumbnailFormat === format
+                                                        ? 'border-accent bg-accent text-void'
+                                                        : 'border-border-subtle bg-elevated text-text-secondary hover:border-accent/40 hover:text-text-primary'
+                                                }`}
+                                            >
+                                                {format}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="space-y-3 p-1">
                                 <label className="text-[10px] font-black text-accent uppercase tracking-widest ml-1 flex items-center gap-2">
                                     <SparklesIcon className="w-3 h-3" />
-                                    Vizuální reference (Screenshot)
+                                    {trans.tool_youtube_ref_title}
                                 </label>
                                 
                                 {thumbnailReferencePreview ? (
@@ -1262,7 +1346,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm">
                                             <button onClick={handleClearReference} className="px-4 py-2 bg-red-500 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
                                                 <EraserIcon className="w-4 h-4" />
-                                                Odstranit
+                                                {trans.tool_youtube_ref_remove}
                                             </button>
                                         </div>
                                     </div>
@@ -1276,8 +1360,8 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                                 <UploadIcon className="w-6 h-6 text-text-secondary group-hover:text-accent" />
                                             </div>
                                             <div className="text-center">
-                                                <span className="block text-[11px] text-text-primary font-black uppercase tracking-wider mb-1">Vložit screenshot</span>
-                                                <span className="block text-[9px] text-text-secondary uppercase tracking-tighter">Nahrát, nebo stisknout Ctrl+V</span>
+                                                <span className="block text-[11px] text-text-primary font-black uppercase tracking-wider mb-1">{trans.tool_youtube_ref_upload}</span>
+                                                <span className="block text-[9px] text-text-secondary uppercase tracking-tighter">{trans.tool_youtube_ref_paste}</span>
                                             </div>
                                             <input 
                                                 id="ref-upload" 
@@ -1294,7 +1378,7 @@ Text: ${thumbnailText}${thumbnailReferenceFile ? '\n(Used visual reference)' : '
                                                 className="w-full py-2.5 px-3 border border-border-subtle bg-surface hover:bg-elevated hover:border-accent/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-text-primary transition-all flex items-center justify-center gap-2"
                                             >
                                                 <HistoryIcon className="w-3.5 h-3.5" />
-                                                Použít aktuální z editoru
+                                                {trans.tool_youtube_ref_current}
                                             </button>
                                         )}
                                     </div>

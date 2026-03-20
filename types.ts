@@ -215,6 +215,12 @@ export interface Preset {
 
 export type AIGalleryType = 'generate' | 'autopilot' | 'youtube-thumbnail';
 
+export type YouTubeThumbnailTemplate =
+  | 'shock-face'
+  | 'authority-clean'
+  | 'split-drama'
+  | 'cinematic-poster';
+
 export interface AIGalleryAsset {
   id: string;
   createdAt: string;

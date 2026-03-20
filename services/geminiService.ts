@@ -1,6 +1,14 @@
 
 import { GoogleGenAI } from '@google/genai';
-import type { AnalysisResult, AutoCropResult, AutoCropSuggestion, CropCoordinates, Language, QualityAssessment } from '../types';
+import type {
+    AnalysisResult,
+    AutoCropResult,
+    AutoCropSuggestion,
+    CropCoordinates,
+    Language,
+    QualityAssessment,
+    YouTubeThumbnailTemplate,
+} from '../types';
 import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
 import { sanitizeText } from '../utils/text';
 import { getApiKey } from '../utils/apiKey';
@@ -26,6 +34,102 @@ const THUMBNAIL_EXTENSION_MAP = {
 } as const;
 
 const THUMBNAIL_FONT_FAMILY = 'Impact, "Arial Black", sans-serif';
+
+type ThumbnailOverlayStyle = {
+    placement: 'top-center' | 'top-left' | 'bottom-left' | 'bottom-center';
+    panel: 'full-top' | 'full-bottom' | 'boxed';
+    align: 'left' | 'center';
+    maxWidthRatio: number;
+    maxLines: number;
+    fillStyle: string;
+    strokeStyle: string;
+    shadowColor: string;
+    accentColor?: string;
+    accentStyle?: 'none' | 'left-bar' | 'underline';
+};
+
+type ThumbnailTemplateDefinition = {
+    promptGuidance: string[];
+    overlay: ThumbnailOverlayStyle;
+};
+
+const THUMBNAIL_TEMPLATE_CONFIG: Record<YouTubeThumbnailTemplate, ThumbnailTemplateDefinition> = {
+    'shock-face': {
+        promptGuidance: [
+            'Compose it like a reaction thumbnail with one dominant subject occupying the center and lower-middle of frame.',
+            'Reserve the upper third as a clean, darker headline zone with minimal clutter.',
+            'Favor expressive emotion, luminous edge lighting, and strong depth separation.',
+        ],
+        overlay: {
+            placement: 'top-center',
+            panel: 'full-top',
+            align: 'center',
+            maxWidthRatio: 0.84,
+            maxLines: 3,
+            fillStyle: '#ffffff',
+            strokeStyle: 'rgba(0, 0, 0, 0.92)',
+            shadowColor: 'rgba(0, 0, 0, 0.45)',
+            accentStyle: 'none',
+        },
+    },
+    'authority-clean': {
+        promptGuidance: [
+            'Create a premium expert-style thumbnail with the main subject on the right third of the frame.',
+            'Keep the lower-left area compositionally clean for a sharp headline overlay.',
+            'Reduce visual clutter and favor trust, polish, and premium channel aesthetics over chaos.',
+        ],
+        overlay: {
+            placement: 'bottom-left',
+            panel: 'boxed',
+            align: 'left',
+            maxWidthRatio: 0.48,
+            maxLines: 3,
+            fillStyle: '#ffffff',
+            strokeStyle: 'rgba(0, 0, 0, 0.9)',
+            shadowColor: 'rgba(0, 0, 0, 0.35)',
+            accentColor: '#58d0ff',
+            accentStyle: 'left-bar',
+        },
+    },
+    'split-drama': {
+        promptGuidance: [
+            'Create a high-tension thumbnail with contrast between two elements, sides, or states.',
+            'Leave the upper-left area clean so an aggressive headline can sit there without fighting the subject.',
+            'Push drama, separation, intensity, and contrast more than realism.',
+        ],
+        overlay: {
+            placement: 'top-left',
+            panel: 'boxed',
+            align: 'left',
+            maxWidthRatio: 0.5,
+            maxLines: 3,
+            fillStyle: '#fff06a',
+            strokeStyle: 'rgba(0, 0, 0, 0.96)',
+            shadowColor: 'rgba(0, 0, 0, 0.38)',
+            accentColor: '#ff7a18',
+            accentStyle: 'underline',
+        },
+    },
+    'cinematic-poster': {
+        promptGuidance: [
+            'Build it like a cinematic poster with dramatic depth, atmosphere, and premium lighting.',
+            'Keep the lower-center band readable so a title can sit there cleanly.',
+            'Favor scale, mood, and polish over meme-like chaos.',
+        ],
+        overlay: {
+            placement: 'bottom-center',
+            panel: 'full-bottom',
+            align: 'center',
+            maxWidthRatio: 0.78,
+            maxLines: 3,
+            fillStyle: '#ffffff',
+            strokeStyle: 'rgba(0, 0, 0, 0.9)',
+            shadowColor: 'rgba(0, 0, 0, 0.42)',
+            accentColor: '#f8b74c',
+            accentStyle: 'underline',
+        },
+    },
+};
 
 function safeJsonParse<T>(text: string | undefined, fallbackError: string): T {
     if (!text) {
@@ -194,14 +298,35 @@ const truncateHeadlineLine = (ctx: CanvasRenderingContext2D, text: string, maxWi
     return `${trimmed.trimEnd()}…`;
 };
 
+const getHeadlineDisplayText = (headlineText: string, template: YouTubeThumbnailTemplate) => {
+    const normalized = normalizeThumbnailHeadline(headlineText);
+    if (template === 'shock-face' || template === 'split-drama') {
+        return normalized.toUpperCase();
+    }
+    return normalized;
+};
+
+const drawRect = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillStyle: string | CanvasGradient
+) => {
+    ctx.fillStyle = fillStyle;
+    ctx.fillRect(x, y, width, height);
+};
+
 const layoutHeadlineText = (
     ctx: CanvasRenderingContext2D,
     headlineText: string,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
+    overlay: ThumbnailOverlayStyle
 ) => {
-    const maxWidth = canvasWidth * 0.84;
-    const maxLines = 3;
+    const maxWidth = canvasWidth * overlay.maxWidthRatio;
+    const maxLines = overlay.maxLines;
     const maxFontSize = Math.round(canvasHeight * 0.15);
     const minFontSize = Math.max(42, Math.round(canvasHeight * 0.062));
     const step = Math.max(4, Math.round(canvasHeight * 0.008));
@@ -227,46 +352,94 @@ const drawThumbnailHeadline = (
     ctx: CanvasRenderingContext2D,
     canvasWidth: number,
     canvasHeight: number,
-    headlineText: string
+    headlineText: string,
+    template: YouTubeThumbnailTemplate
 ) => {
-    const normalizedText = normalizeThumbnailHeadline(headlineText);
-    if (!normalizedText) {
+    const overlay = THUMBNAIL_TEMPLATE_CONFIG[template].overlay;
+    const displayText = getHeadlineDisplayText(headlineText, template);
+    if (!displayText) {
         return;
     }
 
-    const { fontSize, lines } = layoutHeadlineText(ctx, normalizedText, canvasWidth, canvasHeight);
+    const { fontSize, lines } = layoutHeadlineText(ctx, displayText, canvasWidth, canvasHeight, overlay);
     if (lines.length === 0) {
         return;
     }
 
     const lineHeight = Math.round(fontSize * 0.9);
-    const panelHeight = Math.round(lines.length * lineHeight + canvasHeight * 0.12);
-    const topPadding = Math.round(canvasHeight * 0.045);
-    const centerX = canvasWidth / 2;
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, panelHeight);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.78)');
-    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.36)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvasWidth, panelHeight);
-
+    const totalTextHeight = lines.length * lineHeight;
+    const horizontalPadding = Math.round(canvasWidth * 0.055);
+    const verticalPadding = Math.round(canvasHeight * 0.045);
+    const boxPaddingX = Math.max(18, Math.round(fontSize * 0.24));
+    const boxPaddingY = Math.max(14, Math.round(fontSize * 0.18));
     ctx.font = `900 ${fontSize}px ${THUMBNAIL_FONT_FAMILY}`;
-    ctx.textAlign = 'center';
+    const measuredWidths = lines.map((line) => ctx.measureText(line).width);
+    const maxLineWidth = measuredWidths.length ? Math.max(...measuredWidths) : 0;
+    const boxWidth = Math.round(maxLineWidth + boxPaddingX * 2);
+    const boxHeight = Math.round(totalTextHeight + boxPaddingY * 2);
+
+    let textX = canvasWidth / 2;
+    let textStartY = verticalPadding;
+
+    if (overlay.panel === 'full-top') {
+        const panelHeight = Math.round(totalTextHeight + canvasHeight * 0.12);
+        const gradient = ctx.createLinearGradient(0, 0, 0, panelHeight);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.82)');
+        gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.38)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        drawRect(ctx, 0, 0, canvasWidth, panelHeight, gradient);
+        textX = canvasWidth / 2;
+        textStartY = verticalPadding;
+    } else if (overlay.panel === 'full-bottom') {
+        const panelHeight = Math.round(totalTextHeight + canvasHeight * 0.14);
+        const panelY = canvasHeight - panelHeight;
+        const gradient = ctx.createLinearGradient(0, canvasHeight, 0, panelY);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.88)');
+        gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.42)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        drawRect(ctx, 0, panelY, canvasWidth, panelHeight, gradient);
+        textX = canvasWidth / 2;
+        textStartY = canvasHeight - panelHeight + verticalPadding;
+    } else {
+        const boxX = horizontalPadding - Math.round(boxPaddingX * 0.55);
+        const boxY = overlay.placement === 'top-left'
+            ? verticalPadding - Math.round(boxPaddingY * 0.45)
+            : canvasHeight - boxHeight - verticalPadding;
+        drawRect(ctx, boxX, boxY, Math.min(boxWidth, canvasWidth - boxX - horizontalPadding), boxHeight, 'rgba(0, 0, 0, 0.64)');
+        if (overlay.accentStyle === 'left-bar' && overlay.accentColor) {
+            drawRect(ctx, boxX, boxY, Math.max(8, Math.round(fontSize * 0.12)), boxHeight, overlay.accentColor);
+        }
+        textX = horizontalPadding;
+        textStartY = boxY + boxPaddingY;
+    }
+
+    ctx.textAlign = overlay.align;
     ctx.textBaseline = 'top';
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(6, Math.round(fontSize * 0.14));
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.strokeStyle = overlay.strokeStyle;
+    ctx.fillStyle = overlay.fillStyle;
+    ctx.shadowColor = overlay.shadowColor;
     ctx.shadowBlur = Math.round(fontSize * 0.22);
     ctx.shadowOffsetY = Math.max(2, Math.round(fontSize * 0.08));
 
     lines.forEach((line, index) => {
-        const y = topPadding + index * lineHeight;
-        ctx.strokeText(line, centerX, y);
-        ctx.fillText(line, centerX, y);
+        const y = textStartY + index * lineHeight;
+        ctx.strokeText(line, textX, y);
+        ctx.fillText(line, textX, y);
     });
+
+    if (overlay.accentStyle === 'underline' && overlay.accentColor) {
+        const underlineWidth = overlay.align === 'center'
+            ? Math.min(canvasWidth * 0.28, maxLineWidth * 0.65)
+            : Math.min(canvasWidth * 0.24, maxLineWidth * 0.8);
+        const underlineHeight = Math.max(6, Math.round(fontSize * 0.08));
+        const underlineY = textStartY + totalTextHeight + Math.round(fontSize * 0.2);
+        const underlineX = overlay.align === 'center'
+            ? (canvasWidth - underlineWidth) / 2
+            : textX;
+        drawRect(ctx, underlineX, underlineY, underlineWidth, underlineHeight, overlay.accentColor);
+    }
 
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -278,7 +451,8 @@ const renderImageFile = async (
     baseName: string,
     format: keyof typeof THUMBNAIL_MIME_MAP,
     targetSize?: { width: number; height: number },
-    headlineText?: string
+    headlineText?: string,
+    template: YouTubeThumbnailTemplate = 'shock-face'
 ): Promise<File> => {
     const image = await loadImageFromFile(sourceFile);
     const canvas = document.createElement('canvas');
@@ -295,7 +469,7 @@ const renderImageFile = async (
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
     if (headlineText) {
-        drawThumbnailHeadline(ctx, canvas.width, canvas.height, headlineText);
+        drawThumbnailHeadline(ctx, canvas.width, canvas.height, headlineText, template);
     }
 
     const mimeType = THUMBNAIL_MIME_MAP[format];
@@ -376,22 +550,28 @@ const getGenAI = () => {
 export const generateYouTubeThumbnail = async (
     topic: string, 
     textOverlay: string, 
-    options: { resolution: '1K' | '2K' | '4K', format: 'jpeg' | 'png' | 'webp', referenceFile?: File }
+    options: {
+        resolution: '1K' | '2K' | '4K',
+        format: 'jpeg' | 'png' | 'webp',
+        template: YouTubeThumbnailTemplate,
+        referenceFile?: File
+    }
 ): Promise<{ file: File }> => {
     return withRetry(async () => {
         const ai = getGenAI();
         const requestedSize = THUMBNAIL_RESOLUTION_MAP[options.resolution];
         const trimmedTopic = topic.trim();
         const trimmedText = textOverlay.trim();
+        const templateConfig = THUMBNAIL_TEMPLATE_CONFIG[options.template];
         const parts: any[] = [];
         const promptLines = [
             'Create a polished, high-CTR YouTube thumbnail background image.',
             `Topic: ${trimmedTopic}.`,
             'Use one strong focal subject, dramatic lighting, bold contrast, saturated colors, cinematic depth, and premium creator aesthetics.',
             'Keep the composition readable on both mobile and desktop with a clear subject and strong visual hierarchy.',
-            'Leave the upper portion compositionally clean so a headline can be overlaid later.',
             'Do not render any text, letters, captions, subtitles, or logos into the image.',
             'The output must look like a professional YouTube thumbnail visual, not a poster or generic concept art.',
+            ...templateConfig.promptGuidance,
         ];
 
         if (trimmedText) {
@@ -429,7 +609,8 @@ export const generateYouTubeThumbnail = async (
             `yt_thumb_${Date.now()}`,
             options.format,
             requestedSize,
-            trimmedText
+            trimmedText,
+            options.template
         );
 
         return { 
