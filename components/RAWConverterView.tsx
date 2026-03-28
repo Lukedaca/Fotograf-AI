@@ -250,7 +250,7 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                     ref={fileInputRef}
                                     type="file"
                                     multiple
-                                    accept={RAW_EXTENSIONS_STRING + ',image/*'}
+                                    accept="*/*"
                                     onChange={(e) => handleFileSelect(e.target.files)}
                                     className="hidden"
                                 />
