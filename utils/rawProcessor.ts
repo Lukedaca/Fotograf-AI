@@ -116,16 +116,20 @@ const scanForJpegCandidates = async (file: File): Promise<Blob[]> => {
 };
 
 let exifrInstance: ExifrModule | null = null;
+let exifrLoadFailed = false;
 
 const getExifr = async (): Promise<ExifrModule | null> => {
     if (exifrInstance) return exifrInstance;
+    if (exifrLoadFailed) return null;
     try {
         // @ts-ignore
         const module = await import('https://esm.sh/exifr@7.1.3');
         exifrInstance = module.default || module;
+        console.log('[RAW] Exifr loaded OK');
         return exifrInstance;
     } catch (e) {
-        console.warn("Exifr load failed", e);
+        console.warn("[RAW] Exifr load failed, using binary scanner fallback", e);
+        exifrLoadFailed = true;
         return null;
     }
 };
@@ -207,6 +211,8 @@ const reEncodeBlob = (sourceBlob: Blob, options: RawConvertOptions): Promise<{ b
  * Extracts embedded preview, then re-encodes through Canvas with quality/resize control.
  */
 export const processRawFile = async (file: File, options: RawConvertOptions = DEFAULT_OPTIONS): Promise<File> => {
+    console.log(`[RAW] Processing: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+
     const exifr = await getExifr();
     const candidates: ImageCandidate[] = [];
 
@@ -215,45 +221,68 @@ export const processRawFile = async (file: File, options: RawConvertOptions = DE
         try {
             const previewData = await exifr.preview(file);
             if (previewData) {
+                console.log(`[RAW] Exifr preview: ${previewData.length} bytes`);
                 const blob = new Blob([previewData], { type: 'image/jpeg' });
                 const { isValid, width, height } = await validateImageBlob(blob);
-                if (isValid) candidates.push({ blob, width, height, resolution: width * height, source: 'Metadata (Preview)' });
+                if (isValid) {
+                    console.log(`[RAW] Preview valid: ${width}x${height}`);
+                    candidates.push({ blob, width, height, resolution: width * height, source: 'Metadata (Preview)' });
+                }
+            } else {
+                console.log('[RAW] No exifr preview found');
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('[RAW] Exifr preview extraction failed', e);
+        }
 
         // 2. Try Exifr Thumbnail
         try {
             const thumbData = await exifr.thumbnail(file);
             if (thumbData) {
-                    const blob = new Blob([thumbData], { type: 'image/jpeg' });
-                    const { isValid, width, height } = await validateImageBlob(blob);
-                    if (isValid) candidates.push({ blob, width, height, resolution: width * height, source: 'Metadata (Thumbnail)' });
+                console.log(`[RAW] Exifr thumbnail: ${thumbData.length} bytes`);
+                const blob = new Blob([thumbData], { type: 'image/jpeg' });
+                const { isValid, width, height } = await validateImageBlob(blob);
+                if (isValid) {
+                    console.log(`[RAW] Thumbnail valid: ${width}x${height}`);
+                    candidates.push({ blob, width, height, resolution: width * height, source: 'Metadata (Thumbnail)' });
+                }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('[RAW] Exifr thumbnail extraction failed', e);
+        }
+    } else {
+        console.log('[RAW] Exifr not available, using binary scanner');
     }
 
     // Check if we already found a high-res image (> 4 Megapixels)
     const hasHighRes = candidates.some(c => c.resolution > 4_000_000);
 
     if (!hasHighRes) {
-            // 3. Run Brute Force Scanner
-            const scannedBlobs = await scanForJpegCandidates(file);
-            for (const blob of scannedBlobs) {
+        // 3. Run Brute Force Scanner
+        console.log('[RAW] Running binary JPEG scanner...');
+        const scannedBlobs = await scanForJpegCandidates(file);
+        console.log(`[RAW] Scanner found ${scannedBlobs.length} candidates`);
+        for (const blob of scannedBlobs) {
             const { isValid, width, height } = await validateImageBlob(blob);
-            if (isValid) candidates.push({ blob, width, height, resolution: width * height, source: 'Binary Scan' });
+            if (isValid) {
+                console.log(`[RAW] Scanner candidate valid: ${width}x${height}`);
+                candidates.push({ blob, width, height, resolution: width * height, source: 'Binary Scan' });
             }
+        }
     }
 
     if (candidates.length === 0) {
-        throw new Error("Nebyl nalezen validní náhled.");
+        throw new Error(`Nebyl nalezen validní náhled v souboru ${file.name}. Zkuste jiný RAW formát.`);
     }
 
     // 4. Select the BEST candidate
     candidates.sort((a, b) => b.resolution - a.resolution);
     const bestCandidate = candidates[0];
+    console.log(`[RAW] Best candidate: ${bestCandidate.source} ${bestCandidate.width}x${bestCandidate.height}`);
 
     // 5. Re-encode through Canvas (real processing - not just extracting embedded JPEG)
     const { blob: processedBlob, width, height } = await reEncodeBlob(bestCandidate.blob, options);
+    console.log(`[RAW] Re-encoded: ${width}x${height}, ${(processedBlob.size / 1024 / 1024).toFixed(2)} MB`);
 
     const newFileName = file.name.replace(/\.[^/.]+$/, ".jpg");
     return new File([processedBlob], newFileName, { type: 'image/jpeg' });
