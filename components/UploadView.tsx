@@ -45,17 +45,6 @@ const UploadView: React.FC<UploadViewProps> = ({
     e.stopPropagation();
   }, []);
 
-  const downloadBlob = (blob: Blob, fileName: string) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-  };
-
   const processFiles = async (incomingFiles: File[]) => {
       const rawFiles = incomingFiles.filter(f => isRawFile(f));
       const normalFiles = incomingFiles.filter(f => !isRawFile(f));
@@ -65,24 +54,27 @@ const UploadView: React.FC<UploadViewProps> = ({
           onFilesSelected(normalFiles);
       }
 
-      // RAW soubory - konverze + uložení
+      // RAW soubory - výběr složky → konverze → uložení
       if (rawFiles.length > 0) {
-          // Zeptat se kam uložit
-          let dirHandle: any = null;
+          // @ts-ignore - File System Access API
+          if (!window.showDirectoryPicker) {
+              if (addNotification) addNotification('Výběr složky není v tomto prostředí podporován.', 'error');
+              return;
+          }
+
+          let dirHandle: any;
           try {
-              // @ts-ignore - File System Access API
-              if (window.showDirectoryPicker) {
-                  dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-              }
+              // @ts-ignore
+              dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
           } catch (e: any) {
-              if (e.name === 'AbortError') {
-                  // Uživatel zrušil - konvertovat ale stáhnout místo uložení do složky
-                  dirHandle = null;
-              }
+              if (e.name === 'AbortError') return; // zrušeno uživatelem
+              if (addNotification) addNotification('Nepodařilo se otevřít složku.', 'error');
+              return;
           }
 
           setIsProcessing(true);
           const convertedFiles: File[] = [];
+          let errors = 0;
 
           for (let i = 0; i < rawFiles.length; i++) {
               const file = rawFiles[i];
@@ -90,23 +82,15 @@ const UploadView: React.FC<UploadViewProps> = ({
               try {
                   const convertedFile = await processRawFile(file);
 
-                  // Uložit do složky nebo stáhnout
-                  if (dirHandle) {
-                      try {
-                          const fh = await dirHandle.getFileHandle(convertedFile.name, { create: true });
-                          const writable = await fh.createWritable();
-                          await writable.write(convertedFile);
-                          await writable.close();
-                      } catch {
-                          downloadBlob(convertedFile, convertedFile.name);
-                      }
-                  } else {
-                      downloadBlob(convertedFile, convertedFile.name);
-                  }
+                  // Uložit do vybrané složky
+                  const fh = await dirHandle.getFileHandle(convertedFile.name, { create: true });
+                  const writable = await fh.createWritable();
+                  await writable.write(convertedFile);
+                  await writable.close();
 
                   convertedFiles.push(convertedFile);
               } catch (error: any) {
-                  console.error(`RAW conversion failed: ${file.name}`, error);
+                  errors++;
                   if (addNotification) {
                       addNotification(`${file.name}: ${error.message || 'Konverze selhala'}`, 'error');
                   }
@@ -118,13 +102,12 @@ const UploadView: React.FC<UploadViewProps> = ({
 
           if (convertedFiles.length > 0) {
               if (addNotification) {
-                  addNotification(`${convertedFiles.length} RAW → JPEG ${dirHandle ? 'uloženo do složky' : 'staženo'}`, 'info');
+                  addNotification(`${convertedFiles.length} RAW → JPEG uloženo do ${dirHandle.name}/`, 'info');
               }
-              // Přidat i do editoru
               onFilesSelected(convertedFiles);
-          } else if (rawFiles.length > 0) {
+          } else if (errors > 0) {
               if (addNotification) {
-                  addNotification('Konverze RAW souborů selhala. Zkuste jiný formát.', 'error');
+                  addNotification('Konverze RAW souborů selhala.', 'error');
               }
           }
       }
