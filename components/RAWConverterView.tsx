@@ -74,19 +74,6 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         handleFileSelect(e.dataTransfer.files);
     };
 
-    const handlePickOutputFolder = async () => {
-        try {
-            // @ts-ignore - File System Access API (Chrome/Edge)
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            setOutputDirHandle(dirHandle);
-            setOutputDirName(dirHandle.name);
-        } catch (e: any) {
-            if (e.name !== 'AbortError') {
-                addNotification(t.raw_save_folder_error, 'error');
-            }
-        }
-    };
-
     const saveFileToDir = async (dirHandle: any, fileName: string, blob: Blob): Promise<boolean> => {
         try {
             const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
@@ -104,6 +91,21 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         if (rawFiles.length === 0) {
             addNotification(t.raw_no_files, 'error');
             return;
+        }
+
+        // Automaticky otevřít výběr složky PŘED konverzí
+        let dirHandle = outputDirHandle;
+        if (!dirHandle && hasDirectoryPicker) {
+            try {
+                // @ts-ignore
+                dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                setOutputDirHandle(dirHandle);
+                setOutputDirName(dirHandle.name);
+            } catch (e: any) {
+                if (e.name === 'AbortError') return; // uživatel zrušil = nekonvertovat
+                addNotification(t.raw_save_folder_error, 'error');
+                return;
+            }
         }
 
         setIsConverting(true);
@@ -127,10 +129,10 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                     img.src = url;
                 });
 
-                // Save to folder if selected
+                // Uložit do vybrané složky
                 let savedToFolder = false;
-                if (outputDirHandle) {
-                    savedToFolder = await saveFileToDir(outputDirHandle, jpegFile.name, jpegFile);
+                if (dirHandle) {
+                    savedToFolder = await saveFileToDir(dirHandle, jpegFile.name, jpegFile);
                     if (!savedToFolder) {
                         addNotification(`${t.raw_save_file_error} ${jpegFile.name}`, 'error');
                     }
@@ -309,30 +311,8 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                         </select>
                                     </div>
 
-                                    {/* Output folder picker */}
-                                    {hasDirectoryPicker && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-text-secondary mb-2">
-                                                {t.raw_output_folder || 'Výstupní složka'}
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={handlePickOutputFolder}
-                                                className="w-full px-3 py-2 bg-void border border-border-subtle rounded-md text-sm text-left focus:outline-none focus:border-accent hover:bg-accent/5 transition-colors"
-                                            >
-                                                {outputDirName ? (
-                                                    <span className="text-accent font-medium">{outputDirName}</span>
-                                                ) : (
-                                                    <span className="text-text-secondary">{t.raw_pick_folder || 'Vybrat složku...'}</span>
-                                                )}
-                                            </button>
-                                            {!outputDirName && (
-                                                <p className="text-xs text-text-secondary mt-1 opacity-70">
-                                                    {t.raw_pick_folder_hint || 'Volitelné - jinak uložíte ručně po konverzi'}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
+                                    {/* Info - folder will be picked on convert */}
+                                    <div></div>
                                 </div>
                             </div>
                         )}
