@@ -83,6 +83,18 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
             return;
         }
 
+        // 1) Zeptat se kam uložit
+        let dirHandle: any = null;
+        try {
+            // @ts-ignore - File System Access API
+            dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        } catch (e: any) {
+            if (e.name === 'AbortError') return; // uživatel zrušil
+            // Fallback - showDirectoryPicker není k dispozici, použijeme download
+            dirHandle = null;
+        }
+
+        // 2) Konvertovat
         setIsConverting(true);
         setProgress({ current: 0, total: rawFiles.length });
         setConversionError('');
@@ -104,8 +116,19 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                     img.src = url;
                 });
 
-                // Automaticky stáhnout každý konvertovaný soubor
-                downloadBlob(jpegFile, jpegFile.name);
+                // 3) Uložit do vybrané složky nebo stáhnout
+                if (dirHandle) {
+                    try {
+                        const fh = await dirHandle.getFileHandle(jpegFile.name, { create: true });
+                        const writable = await fh.createWritable();
+                        await writable.write(jpegFile);
+                        await writable.close();
+                    } catch (saveErr) {
+                        downloadBlob(jpegFile, jpegFile.name);
+                    }
+                } else {
+                    downloadBlob(jpegFile, jpegFile.name);
+                }
 
                 results.push({
                     originalName: file.name,
@@ -165,7 +188,7 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
             <div className="flex-1 flex flex-col items-center p-4 sm:p-8 overflow-y-auto">
                 <div className="w-full max-w-6xl">
                      <div className="text-center mb-10">
-                        <h1 className="text-4xl font-extrabold tracking-tight text-text-primary">{t.raw_title}</h1>
+                        <h1 className="text-4xl font-extrabold tracking-tight text-text-primary">{t.raw_title} <span className="text-sm text-text-secondary font-normal">v2</span></h1>
                         <p className="mt-3 text-xl text-text-secondary max-w-3xl mx-auto">
                             {t.raw_subtitle}
                         </p>

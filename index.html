@@ -16,6 +16,22 @@
   </head>
   <body class="bg-void text-text-primary">
     <div id="root"></div>
+    <script>
+      // Force SW update - smaže starý cache a reload
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(reg) {
+            reg.update();
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          window.location.reload();
+        });
+      }
+    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
