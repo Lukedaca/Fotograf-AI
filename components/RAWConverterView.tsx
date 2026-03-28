@@ -22,7 +22,6 @@ interface ConvertedFile {
     sizeLabel: string;
     width: number;
     height: number;
-    savedToFolder: boolean;
 }
 
 const RESOLUTION_PRESETS = [
@@ -32,9 +31,6 @@ const RESOLUTION_PRESETS = [
     { label: '2000px', value: 2000 },
     { label: '1200px', value: 1200 },
 ];
-
-// @ts-ignore - File System Access API types
-const hasDirectoryPicker = typeof window !== 'undefined' && !!window.showDirectoryPicker;
 
 const RAWConverterView: React.FC<RAWConverterViewProps> = ({
     title,
@@ -49,21 +45,17 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
     const [isConverting, setIsConverting] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [outputDirHandle, setOutputDirHandle] = useState<any>(null);
-    const [outputDirName, setOutputDirName] = useState<string>('');
-    const [errorCount, setErrorCount] = useState(0);
+    const [conversionError, setConversionError] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Conversion settings
     const [quality, setQuality] = useState(92);
     const [maxResolution, setMaxResolution] = useState(0);
 
     const handleFileSelect = (files: FileList | null) => {
         if (files) {
-            const newFiles = Array.from(files);
-            setRawFiles(newFiles);
+            setRawFiles(Array.from(files));
             setConvertedFiles([]);
-            setErrorCount(0);
+            setConversionError('');
         }
     };
 
@@ -74,17 +66,15 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         handleFileSelect(e.dataTransfer.files);
     };
 
-    const saveFileToDir = async (dirHandle: any, fileName: string, blob: Blob): Promise<boolean> => {
-        try {
-            const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            return true;
-        } catch (e) {
-            console.error(`Save failed: ${fileName}`, e);
-            return false;
-        }
+    const downloadBlob = (blob: Blob, fileName: string) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
     };
 
     const handleConvert = async () => {
@@ -93,26 +83,11 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
             return;
         }
 
-        // Automaticky otevřít výběr složky PŘED konverzí
-        let dirHandle = outputDirHandle;
-        if (!dirHandle && hasDirectoryPicker) {
-            try {
-                // @ts-ignore
-                dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                setOutputDirHandle(dirHandle);
-                setOutputDirName(dirHandle.name);
-            } catch (e: any) {
-                if (e.name === 'AbortError') return; // uživatel zrušil = nekonvertovat
-                addNotification(t.raw_save_folder_error, 'error');
-                return;
-            }
-        }
-
         setIsConverting(true);
         setProgress({ current: 0, total: rawFiles.length });
-        setErrorCount(0);
-        const newConvertedFiles: ConvertedFile[] = [];
-        let errors = 0;
+        setConversionError('');
+        const results: ConvertedFile[] = [];
+        const errors: string[] = [];
 
         const options: RawConvertOptions = { quality, maxResolution };
 
@@ -129,16 +104,10 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                     img.src = url;
                 });
 
-                // Uložit do vybrané složky
-                let savedToFolder = false;
-                if (dirHandle) {
-                    savedToFolder = await saveFileToDir(dirHandle, jpegFile.name, jpegFile);
-                    if (!savedToFolder) {
-                        addNotification(`${t.raw_save_file_error} ${jpegFile.name}`, 'error');
-                    }
-                }
+                // Automaticky stáhnout každý konvertovaný soubor
+                downloadBlob(jpegFile, jpegFile.name);
 
-                newConvertedFiles.push({
+                results.push({
                     originalName: file.name,
                     convertedName: jpegFile.name,
                     originalSize: file.size,
@@ -147,27 +116,25 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                     sizeLabel: `${sizeInMB} MB`,
                     width: dims.w,
                     height: dims.h,
-                    savedToFolder,
                 });
 
             } catch (error: any) {
-                errors++;
-                console.error(`RAW conversion failed for ${file.name}:`, error);
-                addNotification(`${file.name}: ${error.message || 'Konverze selhala'}`, 'error');
+                const msg = `${file.name}: ${error.message || 'Konverze selhala'}`;
+                errors.push(msg);
             } finally {
                 setProgress(prev => ({ ...prev, current: prev.current + 1 }));
             }
         }
 
-        setConvertedFiles(newConvertedFiles);
-        setErrorCount(errors);
+        setConvertedFiles(results);
         setIsConverting(false);
 
-        if (newConvertedFiles.length > 0) {
-            const savedCount = newConvertedFiles.filter(f => f.savedToFolder).length;
-            if (savedCount > 0) {
-                addNotification(`${savedCount} ${t.raw_save_folder_success}`, 'info');
-            }
+        if (errors.length > 0) {
+            setConversionError(errors.join('\n'));
+        }
+
+        if (results.length > 0) {
+            addNotification(`${results.length} ${t.notify_raw_success}`, 'info');
         }
     };
 
@@ -176,37 +143,10 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
         onFilesConverted(files);
     };
 
-    const handleSaveToFolder = async () => {
-        if (convertedFiles.length === 0) return;
-        try {
-            // @ts-ignore
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            let saved = 0;
-            for (const file of convertedFiles) {
-                const ok = await saveFileToDir(dirHandle, file.convertedName, file.blob);
-                if (ok) {
-                    saved++;
-                } else {
-                    addNotification(`${t.raw_save_file_error} ${file.convertedName}`, 'error');
-                }
-            }
-            if (saved > 0) {
-                addNotification(`${saved} ${t.raw_save_folder_success}`, 'info');
-            }
-        } catch (e: any) {
-            if (e.name !== 'AbortError') {
-                addNotification(t.raw_save_folder_error, 'error');
-            }
+    const handleDownloadAll = () => {
+        for (const file of convertedFiles) {
+            downloadBlob(file.blob, file.convertedName);
         }
-    };
-
-    const downloadFile = (url: string, name: string) => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
     const formatSize = (bytes: number) => {
@@ -266,23 +206,19 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                             </div>
                         </div>
 
-                        {/* Settings panel - visible when files are selected */}
+                        {/* Settings */}
                         {rawFiles.length > 0 && (
                             <div className="mt-6 p-5 bg-elevated border border-border-subtle rounded-lg">
                                 <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider mb-4">
                                     {t.raw_settings || 'Nastavení konverze'}
                                 </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    {/* Quality slider */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-sm font-medium text-text-secondary mb-2">
                                             {t.raw_quality || 'Kvalita JPEG'}: <span className="text-accent font-bold">{quality}%</span>
                                         </label>
                                         <input
-                                            type="range"
-                                            min={10}
-                                            max={100}
-                                            step={1}
+                                            type="range" min={10} max={100} step={1}
                                             value={quality}
                                             onChange={(e) => setQuality(Number(e.target.value))}
                                             className="w-full h-2 bg-void rounded-lg appearance-none cursor-pointer accent-accent"
@@ -292,8 +228,6 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                             <span>{t.raw_quality_best || 'Nejlepší kvalita'}</span>
                                         </div>
                                     </div>
-
-                                    {/* Resolution select */}
                                     <div>
                                         <label className="block text-sm font-medium text-text-secondary mb-2">
                                             {t.raw_resolution || 'Rozlišení'}
@@ -310,47 +244,44 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                             ))}
                                         </select>
                                     </div>
-
-                                    {/* Info - folder will be picked on convert */}
-                                    <div></div>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Error display */}
+                        {conversionError && (
+                            <div className="mt-4 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
+                                <h4 className="text-sm font-bold text-red-300 mb-2">Chyby konverze:</h4>
+                                <pre className="text-xs text-red-200 whitespace-pre-wrap">{conversionError}</pre>
                             </div>
                         )}
                         </>
                     ) : (
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-xl font-bold">{t.raw_done}</h3>
-                                {errorCount > 0 && (
-                                    <span className="text-sm text-red-400">{errorCount} {t.raw_errors || 'chyb'}</span>
-                                )}
-                            </div>
-                            <p className="text-sm text-text-secondary mb-1">
+                            <h3 className="text-xl font-bold mb-2">{t.raw_done} - {convertedFiles.length} JPEG</h3>
+                            <p className="text-sm text-text-secondary mb-4">
                                 {t.raw_quality || 'Kvalita'}: {quality}% | {t.raw_resolution || 'Rozlišení'}: {maxResolution === 0 ? (t.raw_res_original || 'Originál') : `${maxResolution}px`}
                             </p>
-                            {outputDirName && (
-                                <p className="text-sm text-accent mb-4">
-                                    {t.raw_saved_to || 'Uloženo do'}: {outputDirName}/
-                                </p>
+
+                            {conversionError && (
+                                <div className="mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
+                                    <h4 className="text-sm font-bold text-red-300 mb-2">Chyby:</h4>
+                                    <pre className="text-xs text-red-200 whitespace-pre-wrap">{conversionError}</pre>
+                                </div>
                             )}
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {convertedFiles.map((file) => (
                                     <div key={file.convertedName} className="group relative aspect-square bg-elevated rounded-lg overflow-hidden shadow-md border border-border-subtle/50">
                                         <img src={file.url} alt={file.convertedName} className="w-full h-full object-contain" />
-                                        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-                                                <div className="px-2 py-1 bg-void border border-border-subtle text-text-secondary text-xs flex flex-col items-end">
-                                                    <span className="font-medium text-text-primary">{file.width}x{file.height}</span>
-                                                    <span className="opacity-70 text-[10px]">{formatSize(file.originalSize)} → {file.sizeLabel}</span>
-                                                </div>
-                                                {file.savedToFolder && (
-                                                    <div className="px-2 py-0.5 bg-green-900/60 border border-green-700/50 text-green-300 text-[10px] rounded">
-                                                        ✓ {t.raw_saved || 'Uloženo'}
-                                                    </div>
-                                                )}
+                                        <div className="absolute top-2 right-2">
+                                            <div className="px-2 py-1 bg-void border border-border-subtle text-text-secondary text-xs flex flex-col items-end">
+                                                <span className="font-medium text-text-primary">{file.width}x{file.height}</span>
+                                                <span className="opacity-70 text-[10px]">{formatSize(file.originalSize)} → {file.sizeLabel}</span>
+                                            </div>
                                         </div>
-
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => downloadFile(file.url, file.convertedName)} className="p-3 bg-elevated border border-border-subtle text-text-primary transition-none" title="Download">
+                                            <button onClick={() => downloadBlob(file.blob, file.convertedName)} className="p-3 bg-elevated border border-border-subtle text-text-primary transition-none" title="Download">
                                                 <ExportIcon className="w-8 h-8" />
                                             </button>
                                         </div>
@@ -373,28 +304,26 @@ const RAWConverterView: React.FC<RAWConverterViewProps> = ({
                                 <ArrowPathIcon className="mr-3 h-6 w-6" />
                                 {isConverting
                                     ? `${t.raw_converting} (${progress.current}/${progress.total})...`
-                                    : `${t.raw_convert} ${rawFiles.length === 0 ? '' : rawFiles.length} ${outputDirName ? `→ ${outputDirName}/` : ''}`
+                                    : `${t.raw_convert} ${rawFiles.length || ''}`
                                 }
                             </button>
                         ) : (
                             <div className="flex flex-col gap-4">
                                 <button
-                                    onClick={handleAddToProject}
+                                    onClick={handleDownloadAll}
                                     className="w-full inline-flex items-center justify-center px-6 py-4 border border-accent text-lg font-semibold text-void bg-accent transition-none"
+                                >
+                                    <ExportIcon className="mr-3 h-6 w-6" />
+                                    {t.raw_save_folder || 'Stáhnout vše'} ({convertedFiles.length})
+                                </button>
+                                <button
+                                    onClick={handleAddToProject}
+                                    className="w-full inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-accent/10 transition-colors"
                                 >
                                     {t.raw_open_editor}
                                 </button>
-                                {!convertedFiles.every(f => f.savedToFolder) && hasDirectoryPicker && (
-                                    <button
-                                        onClick={handleSaveToFolder}
-                                        className="w-full inline-flex items-center justify-center px-6 py-4 border border-border-subtle text-lg font-semibold text-text-primary bg-elevated hover:bg-accent/10 transition-colors"
-                                    >
-                                        <ExportIcon className="mr-3 h-6 w-6" />
-                                        {t.raw_save_folder}
-                                    </button>
-                                )}
                                 <button
-                                    onClick={() => { setRawFiles([]); setConvertedFiles([]); setOutputDirHandle(null); setOutputDirName(''); setErrorCount(0); }}
+                                    onClick={() => { setRawFiles([]); setConvertedFiles([]); setConversionError(''); }}
                                     className="w-full inline-flex items-center justify-center px-6 py-3 border border-border-subtle text-sm font-medium text-text-primary bg-elevated hover:bg-elevated transition-colors"
                                 >
                                     {t.raw_convert_more}

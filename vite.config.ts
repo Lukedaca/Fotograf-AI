@@ -40,6 +40,8 @@ export default defineConfig(({ mode }) => {
             ],
           },
           workbox: {
+            skipWaiting: true,
+            clientsClaim: true,
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
