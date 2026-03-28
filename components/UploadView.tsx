@@ -45,33 +45,88 @@ const UploadView: React.FC<UploadViewProps> = ({
     e.stopPropagation();
   }, []);
 
-  const processFiles = async (incomingFiles: File[]) => {
-      setIsProcessing(true);
-      const finalFiles: File[] = [];
-      let rawCount = 0;
+  const downloadBlob = (blob: Blob, fileName: string) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
 
-      for (let i = 0; i < incomingFiles.length; i++) {
-          const file = incomingFiles[i];
-          if (isRawFile(file)) {
-              rawCount++;
-              setProcessingStatus(`${t.upload_raw_converting}: ${file.name} (${rawCount}...)`);
-              try {
-                  const convertedFile = await processRawFile(file);
-                  finalFiles.push(convertedFile);
-              } catch (error) {
-                  console.error(`Failed to convert ${file.name}`, error);
-                  if (addNotification) addNotification(`${t.msg_error}: ${file.name}`, 'error');
-              }
-          } else {
-              finalFiles.push(file);
-          }
+  const processFiles = async (incomingFiles: File[]) => {
+      const rawFiles = incomingFiles.filter(f => isRawFile(f));
+      const normalFiles = incomingFiles.filter(f => !isRawFile(f));
+
+      // Normální soubory rovnou do editoru
+      if (normalFiles.length > 0) {
+          onFilesSelected(normalFiles);
       }
 
-      setIsProcessing(false);
-      setProcessingStatus('');
-      
-      if (finalFiles.length > 0) {
-          onFilesSelected(finalFiles);
+      // RAW soubory - konverze + uložení
+      if (rawFiles.length > 0) {
+          // Zeptat se kam uložit
+          let dirHandle: any = null;
+          try {
+              // @ts-ignore - File System Access API
+              if (window.showDirectoryPicker) {
+                  dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+              }
+          } catch (e: any) {
+              if (e.name === 'AbortError') {
+                  // Uživatel zrušil - konvertovat ale stáhnout místo uložení do složky
+                  dirHandle = null;
+              }
+          }
+
+          setIsProcessing(true);
+          const convertedFiles: File[] = [];
+
+          for (let i = 0; i < rawFiles.length; i++) {
+              const file = rawFiles[i];
+              setProcessingStatus(`${t.upload_raw_converting}: ${file.name} (${i + 1}/${rawFiles.length})`);
+              try {
+                  const convertedFile = await processRawFile(file);
+
+                  // Uložit do složky nebo stáhnout
+                  if (dirHandle) {
+                      try {
+                          const fh = await dirHandle.getFileHandle(convertedFile.name, { create: true });
+                          const writable = await fh.createWritable();
+                          await writable.write(convertedFile);
+                          await writable.close();
+                      } catch {
+                          downloadBlob(convertedFile, convertedFile.name);
+                      }
+                  } else {
+                      downloadBlob(convertedFile, convertedFile.name);
+                  }
+
+                  convertedFiles.push(convertedFile);
+              } catch (error: any) {
+                  console.error(`RAW conversion failed: ${file.name}`, error);
+                  if (addNotification) {
+                      addNotification(`${file.name}: ${error.message || 'Konverze selhala'}`, 'error');
+                  }
+              }
+          }
+
+          setIsProcessing(false);
+          setProcessingStatus('');
+
+          if (convertedFiles.length > 0) {
+              if (addNotification) {
+                  addNotification(`${convertedFiles.length} RAW → JPEG ${dirHandle ? 'uloženo do složky' : 'staženo'}`, 'info');
+              }
+              // Přidat i do editoru
+              onFilesSelected(convertedFiles);
+          } else if (rawFiles.length > 0) {
+              if (addNotification) {
+                  addNotification('Konverze RAW souborů selhala. Zkuste jiný formát.', 'error');
+              }
+          }
       }
   };
 
@@ -153,7 +208,7 @@ const UploadView: React.FC<UploadViewProps> = ({
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept={`image/jpeg,image/png,image/webp,${RAW_EXTENSIONS_STRING}`}
+                    accept="*/*"
                     onChange={handleFileSelect}
                     className="hidden"
                   />
