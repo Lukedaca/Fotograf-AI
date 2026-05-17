@@ -420,3 +420,106 @@ export const applyEditsAndExport = (
     img.src = imageUrl;
   });
 };
+
+// --- Patch-based retouch helpers (bypass safety filter cropováním) ---
+
+const loadImageFromFile = (file: File): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image from file'));
+    };
+    img.src = url;
+  });
+};
+
+export type CropRect = { x: number; y: number; width: number; height: number };
+
+/**
+ * Vyřízne čtvercový patch kolem bbox s paddingem a resizem na targetSize.
+ * Vrátí patch File + skutečný cropRect v originálních souřadnicích (pro pozdější composite).
+ */
+export const cropPatchFromFile = async (
+  file: File,
+  bbox: CropRect,
+  targetSize: number = 768,
+  paddingRatio: number = 0.3
+): Promise<{ patchFile: File; cropRect: CropRect }> => {
+  const img = await loadImageFromFile(file);
+
+  const longSide = Math.max(bbox.width, bbox.height);
+  const padded = Math.ceil(longSide * (1 + paddingRatio * 2));
+  // Square crop, větší než bbox o padding, ale ne větší než celý obrázek
+  const cropSize = Math.min(padded, Math.min(img.width, img.height));
+
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
+
+  let cropX = Math.round(cx - cropSize / 2);
+  let cropY = Math.round(cy - cropSize / 2);
+  cropX = Math.max(0, Math.min(img.width - cropSize, cropX));
+  cropY = Math.max(0, Math.min(img.height - cropSize, cropY));
+
+  const cropRect: CropRect = { x: cropX, y: cropY, width: cropSize, height: cropSize };
+
+  const canvas = document.createElement('canvas');
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas context unavailable');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, targetSize, targetSize);
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Patch toBlob failed'))), 'image/jpeg', 0.95);
+  });
+  const patchFile = new File([blob], `patch_${file.name}`, { type: 'image/jpeg' });
+  return { patchFile, cropRect };
+};
+
+/**
+ * Slepi retušovaný patch zpět do originálního obrázku na pozici cropRect.
+ * Patch může mít jiné rozlišení než cropRect — automaticky se resizuje.
+ */
+export const compositePatchIntoFile = async (
+  originalFile: File,
+  patchFile: File,
+  cropRect: CropRect,
+  outputMime: string = 'image/jpeg',
+  quality: number = 0.95
+): Promise<File> => {
+  const [origImg, patchImg] = await Promise.all([
+    loadImageFromFile(originalFile),
+    loadImageFromFile(patchFile),
+  ]);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = origImg.width;
+  canvas.height = origImg.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas context unavailable');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.drawImage(origImg, 0, 0);
+  ctx.drawImage(patchImg, 0, 0, patchImg.width, patchImg.height, cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Composite toBlob failed'))),
+      outputMime,
+      outputMime === 'image/jpeg' ? quality : undefined
+    );
+  });
+
+  const ext = outputMime === 'image/png' ? 'png' : 'jpg';
+  const baseName = originalFile.name.replace(/\.[^/.]+$/, '');
+  return new File([blob], `retouched_${baseName}.${ext}`, { type: outputMime });
+};

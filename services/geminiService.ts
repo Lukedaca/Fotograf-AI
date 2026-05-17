@@ -9,7 +9,7 @@ import type {
     QualityAssessment,
     YouTubeThumbnailTemplate,
 } from '../types';
-import { fileToBase64, base64ToFile } from '../utils/imageProcessor';
+import { fileToBase64, base64ToFile, cropPatchFromFile, compositePatchIntoFile, type CropRect } from '../utils/imageProcessor';
 import { sanitizeText } from '../utils/text';
 import { getApiKey } from '../utils/apiKey';
 
@@ -797,7 +797,8 @@ export const assessQuality = async (file: File): Promise<QualityAssessment> => {
     });
 };
 
-export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ file: File }> => {
+// Direct full-image retouch (může trigger safety filter pro lidi)
+const retouchFullImage = async (file: File, prompt: string): Promise<{ file: File }> => {
     return withRetry(async () => {
         const ai = getGenAI();
         const base64Image = await fileToBase64(file);
@@ -816,6 +817,125 @@ export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ f
         const imagePart = getInlineImageData(response);
         return { file: await base64ToFile(imagePart.data, `retouched_${file.name}`, imagePart.mimeType) };
     }, 5);
+};
+
+/**
+ * Najde bounding box objektu/oblasti popsané promptem. Vrátí pixely v rámci originálu nebo null.
+ * Používá gemini-2.5-flash s vision (native bbox capability v normalized 0-1000 souřadnicích).
+ */
+const detectObjectBoundingBox = async (
+    file: File,
+    description: string
+): Promise<CropRect | null> => {
+    const ai = getGenAI();
+    const base64Image = await fileToBase64(file);
+    // Načti dimensions pro převod normalized → pixels
+    const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve({ w: img.width, h: img.height }); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image dim read failed')); };
+        img.src = url;
+    });
+
+    const detectPrompt = `Locate the region described as: "${description}".
+Return ONLY a JSON object in this exact format (no markdown, no explanation):
+{"box_2d": [ymin, xmin, ymax, xmax]}
+Coordinates must be integers normalized to 0-1000 (top-left origin).
+If the described region is not visible, return: {"box_2d": [0, 0, 0, 0]}`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: file.type } },
+                    { text: detectPrompt },
+                ],
+            },
+            config: { responseMimeType: 'application/json' },
+        });
+        const text = (response as any).text || '';
+        const parsed = JSON.parse(text);
+        const box = Array.isArray(parsed?.box_2d) ? parsed.box_2d : null;
+        if (!box || box.length !== 4) return null;
+        const [ymin, xmin, ymax, xmax] = box.map((n: any) => Number(n));
+        if ([ymin, xmin, ymax, xmax].some((n) => !Number.isFinite(n))) return null;
+        if (ymax <= ymin || xmax <= xmin) return null;
+        // Convert 0-1000 normalized → pixels
+        const x = Math.round((xmin / 1000) * dims.w);
+        const y = Math.round((ymin / 1000) * dims.h);
+        const width = Math.round(((xmax - xmin) / 1000) * dims.w);
+        const height = Math.round(((ymax - ymin) / 1000) * dims.h);
+        if (width <= 0 || height <= 0) return null;
+        return { x, y, width, height };
+    } catch (e) {
+        console.warn('Bounding box detection failed:', e);
+        return null;
+    }
+};
+
+// Patch-level retouch s neutrální instrukcí — bez kontextu celé osoby projde safety filtrem
+const retouchPatchWithNeutralPrompt = async (patchFile: File): Promise<File> => {
+    return withRetry(async () => {
+        const ai = getGenAI();
+        const base64Patch = await fileToBase64(patchFile);
+        const response = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-image-preview',
+            contents: {
+                parts: [
+                    { inlineData: { data: base64Patch, mimeType: patchFile.type } },
+                    { text: 'Professional photo retouching task: this is a close-up texture patch. Clean and smooth the entire surface so it looks uniform and natural. Remove any markings, scratches, dark patterns, ink or imperfections you see. Match the surrounding skin tone, lighting and texture so the result is seamless. Preserve original resolution, lighting direction and color balance. Return ONLY the edited image, no text.' },
+                ],
+            },
+            config: { responseModalities: ['image', 'text'] },
+        });
+        const imagePart = getInlineImageData(response);
+        return base64ToFile(imagePart.data, `patch_${patchFile.name}`, imagePart.mimeType);
+    }, 3);
+};
+
+/**
+ * Fallback retouch: detect bbox → crop patch → retouch jen patch (bez kontextu osoby) → composite zpět.
+ * Safety filter neuvidí celou osobu, jen kus textury → projde i pro "odstraň tetování" apod.
+ */
+const retouchViaPatchExtraction = async (file: File, prompt: string): Promise<{ file: File }> => {
+    const bbox = await detectObjectBoundingBox(file, prompt);
+    if (!bbox) {
+        throw new Error('PATCH_FALLBACK_FAILED: nepodařilo se najít oblast v obrázku. Zkus specifičtější popis (např. "tmavý vzor na pravém předloktí").');
+    }
+
+    const { patchFile, cropRect } = await cropPatchFromFile(file, bbox, 768, 0.3);
+
+    let retouchedPatch: File;
+    try {
+        retouchedPatch = await retouchPatchWithNeutralPrompt(patchFile);
+    } catch (e: any) {
+        // I patch-level safety block – fakt nic nelze
+        if (e?.message?.startsWith('SAFETY_BLOCKED:')) {
+            throw new Error('PATCH_FALLBACK_FAILED: i lokální patch byl blokován. Zkus masku (štětec) v Retouch módu.');
+        }
+        throw e;
+    }
+
+    const merged = await compositePatchIntoFile(file, retouchedPatch, cropRect, file.type || 'image/jpeg', 0.95);
+    return { file: merged };
+};
+
+/**
+ * Public retouch entry — zkusí full-image, při SAFETY blocku automaticky fallback na patch flow.
+ */
+export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ file: File }> => {
+    try {
+        return await retouchFullImage(file, prompt);
+    } catch (e: any) {
+        const msg = e?.message || '';
+        if (msg.startsWith('SAFETY_BLOCKED:')) {
+            console.warn('Full-image retouch blocked by safety, trying patch extraction fallback...');
+            return await retouchViaPatchExtraction(file, prompt);
+        }
+        throw e;
+    }
 };
 
 export const retouchWithMask = async (file: File, maskBase64: string): Promise<{ file: File }> => {

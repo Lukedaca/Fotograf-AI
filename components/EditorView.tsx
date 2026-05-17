@@ -394,11 +394,22 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
       } catch (e: any) {
         const raw = e?.message || '';
         const isSafety = raw.startsWith('SAFETY_BLOCKED:');
-        const friendly = isSafety
-          ? (language === 'cs'
-              ? 'AI zablokovala požadavek (bezpečnostní filtr). Zkus přesnější popis – např. "vyhlaď tmavý vzor na předloktí" místo "odstraň tetování".'
-              : 'AI blocked the request (safety filter). Try a more specific phrasing – e.g. "smooth out the dark pattern on the forearm" instead of "remove tattoos".')
-          : (language === 'cs' ? `Retuš se nepovedla: ${raw}` : `Retouch failed: ${raw}`);
+        const isPatchFail = raw.startsWith('PATCH_FALLBACK_FAILED:');
+        let friendly: string;
+        if (isPatchFail) {
+          // Patch flow nezvládl - ukázat konkrétní hint
+          const detail = raw.replace('PATCH_FALLBACK_FAILED:', '').trim();
+          friendly = language === 'cs'
+            ? `Lokální retuš selhala: ${detail}`
+            : `Local retouch failed: ${detail}`;
+        } else if (isSafety) {
+          // Safety block, který ani patch flow neobešel
+          friendly = language === 'cs'
+            ? 'AI zablokovala i lokální retuš. Zkus masku (štětec) — namaluj přes oblast a aplikuj.'
+            : 'AI blocked even local retouch. Try the mask brush — paint over the area and apply.';
+        } else {
+          friendly = language === 'cs' ? `Retuš se nepovedla: ${raw}` : `Retouch failed: ${raw}`;
+        }
         addNotification(friendly, 'error');
         console.error('Retouch error:', e);
       } finally {
