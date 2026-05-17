@@ -530,9 +530,16 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
   }, [activeFile, addNotification, onDeductCredits, onOpenApiKeyModal, trans.msg_error]);
 
   const buildExportArtifactForFile = useCallback(async (file: UploadedFile, edits: ManualEdits) => {
-    const blob = await applyEditsAndExport(file.previewUrl, edits, exportOptions);
-    const fileName = buildEditedFileName(file.file.name, exportOptions.format);
-    return { blob, fileName };
+    // Vytvoříme fresh blob URL přímo z File objektu — file.previewUrl může být revoked
+    // useEffectem co generuje low-res preview (sdílí stejný URL string po retuši).
+    const freshUrl = URL.createObjectURL(file.file);
+    try {
+      const blob = await applyEditsAndExport(freshUrl, edits, exportOptions);
+      const fileName = buildEditedFileName(file.file.name, exportOptions.format);
+      return { blob, fileName };
+    } finally {
+      URL.revokeObjectURL(freshUrl);
+    }
   }, [exportOptions]);
 
   const buildManualExportArtifact = useCallback(async () => {
