@@ -392,7 +392,15 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         setRetouchPromptHistory(prev => [prompt, ...prev.filter(p => p !== prompt)].slice(0, 10));
         addNotification(language === 'cs' ? 'Retuš dokončena' : 'Retouch complete', 'info');
       } catch (e: any) {
-        addNotification(`Retouch error: ${e.message}`, 'error');
+        const raw = e?.message || '';
+        const isSafety = raw.startsWith('SAFETY_BLOCKED:');
+        const friendly = isSafety
+          ? (language === 'cs'
+              ? 'AI zablokovala požadavek (bezpečnostní filtr). Zkus přesnější popis – např. "vyhlaď tmavý vzor na předloktí" místo "odstraň tetování".'
+              : 'AI blocked the request (safety filter). Try a more specific phrasing – e.g. "smooth out the dark pattern on the forearm" instead of "remove tattoos".')
+          : (language === 'cs' ? `Retuš se nepovedla: ${raw}` : `Retouch failed: ${raw}`);
+        addNotification(friendly, 'error');
+        console.error('Retouch error:', e);
       } finally {
         setRetouchProcessing(false);
         setIsLoading(false);
@@ -533,10 +541,13 @@ const EditorView: React.FC<EditorViewProps> = (props) => {
         addNotification(trans.msg_success, 'info');
     } catch (e) {
         const message = e instanceof Error ? e.message : '';
+        console.error('Manual export failed:', e);
         if (message.includes('API_KEY_MISSING') || message.toLowerCase().includes('api key')) {
             onOpenApiKeyModal();
+            addNotification(trans.msg_error, 'error');
+            return;
         }
-        addNotification(trans.msg_error, 'error');
+        addNotification(language === 'cs' ? `Export selhal: ${message || 'neznámá chyba'}` : `Export failed: ${message || 'unknown error'}`, 'error');
     }
     finally { setIsLoading(false); }
   };

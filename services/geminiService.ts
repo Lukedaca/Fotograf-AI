@@ -173,10 +173,11 @@ async function withRetry<T>(
             // Always retry RETRYABLE errors (e.g. model returned text instead of image)
             const isRetryable = errorMessage.startsWith('RETRYABLE:');
 
-            // Don't retry only truly permanent failures (bad API key, invalid JSON)
+            // Don't retry permanent failures (bad API key, invalid JSON, safety blocks)
             if (!isRetryable && (
                 lowerMessage.includes('invalid api key') ||
-                lowerMessage.includes('invalid json')
+                lowerMessage.includes('invalid json') ||
+                errorMessage.startsWith('SAFETY_BLOCKED:')
             )) {
                 throw lastError;
             }
@@ -199,15 +200,22 @@ function getInlineImageData(response: any) {
 
     if (!response.candidates || response.candidates.length === 0) {
         if (response.promptFeedback?.blockReason) {
-            throw new Error(`AI blocked request: ${response.promptFeedback.blockReason}`);
+            throw new Error(`SAFETY_BLOCKED: ${response.promptFeedback.blockReason}`);
         }
         throw new Error('AI returned no results - may be rate limited or model unavailable');
     }
 
     const candidate = response.candidates[0];
 
-    // Any non-image response is retryable — never give up
-    if (candidate.finishReason === 'SAFETY' || !candidate.content || !candidate.content.parts) {
+    // SAFETY / RECITATION / PROHIBITED_CONTENT jsou trvalá blokace — retry nepomůže, jen plýtvá kredity a časem
+    if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'PROHIBITED_CONTENT' || candidate.finishReason === 'IMAGE_SAFETY') {
+        throw new Error(`SAFETY_BLOCKED: ${candidate.finishReason}`);
+    }
+    if (candidate.finishReason === 'RECITATION') {
+        throw new Error('SAFETY_BLOCKED: RECITATION');
+    }
+
+    if (!candidate.content || !candidate.content.parts) {
         throw new Error('RETRYABLE: AI response has no content - retrying');
     }
 
@@ -222,6 +230,10 @@ function getInlineImageData(response: any) {
             .map((p: any) => p.text)
             .join(' ');
         console.warn('AI returned text instead of image:', textParts.slice(0, 200));
+        // Pokud text obsahuje typické safety odmítnutí, neretryovat
+        if (/cannot|can't|won't|not able|policy|safety|inappropriate|harmful/i.test(textParts)) {
+            throw new Error(`SAFETY_BLOCKED: model refused (${textParts.slice(0, 120)})`);
+        }
         throw new Error('RETRYABLE: AI did not generate image - returned text instead');
     }
 
@@ -794,7 +806,7 @@ export const retouchWithPrompt = async (file: File, prompt: string): Promise<{ f
             contents: {
                 parts: [
                     { inlineData: { data: base64Image, mimeType: file.type } },
-                    { text: `Edit this photo: ${prompt}. Return ONLY the edited image. Keep the same style, composition and resolution. Apply ONLY the requested edit, nothing else.` }
+                    { text: `You are a professional photo retoucher working on a commercial portrait. Apply this retouching request to the photo: "${prompt}". Use natural skin tones, realistic textures, intelligent inpainting and seamless blending so the result looks like a clean, untouched photograph. Keep the original style, composition, lighting, framing and resolution. Apply ONLY the requested edit. Return ONLY the edited image, no text.` }
                 ]
             },
             config: {

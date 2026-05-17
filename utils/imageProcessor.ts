@@ -131,7 +131,9 @@ export async function calculateHistogramAsync(imageData: ImageData): Promise<His
 export const calculateHistogram = (imageUrl: string): Promise<HistogramData> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = "anonymous";
+        if (!/^(blob:|data:)/i.test(imageUrl)) {
+            img.crossOrigin = "anonymous";
+        }
         img.onload = async () => {
             const canvas = document.createElement('canvas');
             // Resize for faster processing, 500px is enough for histogram
@@ -176,7 +178,11 @@ export const applyEditsAndExport = (
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Blob a data URLs jsou same-origin – crossOrigin='anonymous' u nich může způsobit onerror
+    // nebo canvas tainting (toBlob pak vrátí null / SecurityError). Nastavit jen pro http(s) zdroje.
+    if (!/^(blob:|data:)/i.test(imageUrl)) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
